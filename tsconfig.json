@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "es5",
+    "declaration": true,
+    "skipLibCheck": true,
+    "jsx": "react",
+    "downlevelIteration": true,
+    "esModuleInterop": true,
+    "removeComments": true,
+    "outDir": "dist",
+    "noEmit": true
+  },
+  "include": ["src", "test"]
+}

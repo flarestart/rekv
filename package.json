@@ -1,0 +1,37 @@
+{
+  "name": "rekv",
+  "version": "0.0.4",
+  "main": "dist/rekv.js",
+  "author": "flarestart",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/flarestart/rekv.git"
+  },
+  "license": "MIT",
+  "peerDependencies": {
+    "react": "^16.8.0"
+  },
+  "scripts": {
+    "build": "tsc --noEmit false"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.MD"
+  ],
+  "devDependencies": {
+    "@types/react": "^16.8.0",
+    "react": "^16.8.0",
+    "typescript": "^3.6.3"
+  },
+  "keywords": [
+    "hooks",
+    "state",
+    "react",
+    "store",
+    "key-value",
+    "redux",
+    "frontend",
+    "functional"
+  ]
+}
