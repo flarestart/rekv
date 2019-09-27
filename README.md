@@ -4,9 +4,9 @@ Rekv 是一个为 React 函数式组件设计的全局状态管理器
 
 ### 1. 特色
 
-* 高性能，使用 Key-Value 而不是树型结构来处理状态
-* 无 Redux，无依赖，仅 state
-* TypeScript 友好
+- 高性能，使用 Key-Value 而不是树型结构来处理状态
+- 无 Redux，无依赖，仅 state
+- TypeScript 友好
 
 ### 2. 使用要求
 
@@ -46,7 +46,11 @@ export default function Demo() {
   const name = rekv.useState('name');
   const count = rekv.useState('count');
 
-  return <div>{name}, {count}</div>;
+  return (
+    <div>
+      {name}, {count}
+    </div>
+  );
 }
 ```
 
@@ -57,18 +61,18 @@ import React from 'react';
 import { rekv } from 'rekv';
 
 // 重置计数器
-function reset(){
-  rekv.setState({count: 0});
+function reset() {
+  rekv.setState({ count: 0 });
 }
- 
+
 function increment() {
   rekv.setState(state => ({ count: state.count + 1 }));
 }
- 
+
 function decrement() {
   rekv.setState(state => ({ count: state.count - 1 }));
 }
- 
+
 export default function Button() {
   return (
     <div>
@@ -79,7 +83,6 @@ export default function Button() {
   );
 }
 ```
-
 
 #### 4.2 创建一个 Rekv 实例，并进行 TypeScript 类型检查
 
@@ -95,12 +98,11 @@ interface InitState {
 }
 
 export const store = new Rekv<InitState>({
-  state: {
+  initState: {
     name: 'Jack',
     age: 25,
   },
 });
-
 ```
 
 ```tsx
@@ -110,31 +112,35 @@ import { store } from './store';
 
 export default function User() {
   const name = store.useState('name'); // name 将被推断为 string 类型
-  const age = store.useState('age');   // age 将被推断为 number | undefined
+  const age = store.useState('age'); // age 将被推断为 number | undefined
 
-  return <div>{name}, {age}</div>;
+  return (
+    <div>
+      {name}, {age}
+    </div>
+  );
 }
 ```
 
 #### 4.3 在 React 类组件中使用
 
-**方式1：通过订阅数据变化，并更新当前组件的状态**
+**方式 1：通过订阅数据变化，并更新当前组件的状态**
 
 ```tsx
 import React from 'react';
 import { rekv } from 'rekv';
 
-export default class MyComponent extends React.Component{
+export default class MyComponent extends React.Component {
   state = {
     nativeCount: 0,
-  }
+  };
 
-  componentDidMount(){
+  componentDidMount() {
     // 订阅 key 为 count 的状态，并使用 this.setState 更新当前组件的 count 状态
-    rekv.bindClassComponent(this, {count: 'nativeCount'});
+    rekv.bindClassComponent(this, { count: 'nativeCount' });
   }
 
-  componentWillUnmount(){
+  componentWillUnmount() {
     // 组件退出，取消当前组件的订阅
     rekv.unbindClassComponent(this);
   }
@@ -145,15 +151,23 @@ export default class MyComponent extends React.Component{
 }
 ```
 
-**方式2：通过函数式组件包裹类组件**
+**方式 2：通过函数式组件包裹类组件**
 
 ```tsx
 import React from 'react';
-import { rekv } from './dist/rekv';
+import { rekv } from 'rekv';
 
-function Demo(){
+function Demo() {
   const count = rekv.useState('count');
   return <MyComponent count={count} />;
 }
 ```
 
+#### 4.4 获取当前时刻的状态
+
+```tsx
+import { rekv } from 'rekv';
+
+// 获取当前时刻的状态，如果需要订阅数据变化，可以参阅 useState
+const currentState = rekv.getCurrentState();
+```

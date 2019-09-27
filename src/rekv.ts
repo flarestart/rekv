@@ -202,6 +202,10 @@ export class Rekv<T extends InitState> {
     }
   }
 
+  getCurrentState(): Readonly<T> {
+    return this.state;
+  }
+
   setInitState(obj: { [key: string]: any }) {
     if (!isPlainObject(obj)) {
       throw new Error('init state is not a plain object');
