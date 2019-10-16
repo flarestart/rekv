@@ -57,7 +57,7 @@ function isPlainObject(obj: any): boolean {
 
 export class Rekv<T extends InitState> {
   constructor(options?: { initState: T }) {
-    if (options && options.initState) {
+    if (options) {
       if (!isPlainObject(options.initState)) {
         throw new Error('init state is not a plain object');
       }
@@ -140,25 +140,6 @@ export class Rekv<T extends InitState> {
     }, [key]);
     return value;
   }
-
-  // useMulti<K extends keyof T>(select: { [_ in K]: string }): Pick<T, K> {
-  //   const keys = Object.keys(select);
-  //   const values: any = {};
-  //   keys.forEach(key => {
-  //     values[key] = this.states[key];
-  //   });
-  //   let [value, setValue] = useState(values);
-
-  //   useEffect(() => {
-  //     // this.on(key, setValue);
-  //     console.log('bind', select);
-  //     return () => {
-  //       // this.off(key, setValue);
-  //       console.log('unbind', select);
-  //     };
-  //   }, [select]);
-  //   return value;
-  // }
 
   // bind React class component
   bindClassComponent<K extends keyof T>(component: Component, selector: { [_ in K]: string | true }): void {

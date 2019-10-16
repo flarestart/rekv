@@ -1,6 +1,6 @@
 {
   "name": "rekv",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "main": "dist/rekv.js",
   "author": "flarestart",
   "repository": {
@@ -12,7 +12,10 @@
     "react": "^16.8.0"
   },
   "scripts": {
-    "build": "tsc --noEmit false"
+    "build": "tsc --noEmit false",
+    "test": "jest",
+    "coverage": "jest --coverage",
+    "coveralls": "jest --coverage && cat ./coverage/lcov.info | coveralls"
   },
   "files": [
     "dist",
@@ -20,8 +23,18 @@
     "README.MD"
   ],
   "devDependencies": {
+    "@types/chai": "^4.2.3",
+    "@types/enzyme": "^3.10.3",
     "@types/react": "^16.8.0",
+    "@types/react-dom": "^16.9.1",
+    "chai": "^4.2.0",
+    "coveralls": "^3.0.7",
+    "enzyme": "^3.10.0",
+    "enzyme-adapter-react-16": "^1.14.0",
+    "jest": "^24.9.0",
     "react": "^16.8.0",
+    "react-dom": "^16.10.2",
+    "ts-jest": "^24.1.0",
     "typescript": "^3.6.3"
   },
   "keywords": [
@@ -33,5 +46,8 @@
     "redux",
     "frontend",
     "functional"
-  ]
+  ],
+  "dependencies": {
+    "@types/jest": "^24.0.18"
+  }
 }

@@ -2,6 +2,11 @@
 
 Rekv 是一个为 React 函数式组件设计的全局状态管理器
 
+[![Coveralls][coverage-image]][coverage-url]
+![Travis CI][ci-url]
+[![NPM version][npm-image]][npm-url]
+[![Downloads][downloads-image]][downloads-url]
+
 ### 1. 特色
 
 - 高性能，使用 Key-Value 而不是树型结构来处理状态
@@ -171,3 +176,11 @@ import { rekv } from 'rekv';
 // 获取当前时刻的状态，如果需要订阅数据变化，可以参阅 useState
 const currentState = rekv.getCurrentState();
 ```
+
+[coverage-image]: https://img.shields.io/coveralls/flarestart/rekv.svg
+[coverage-url]: https://coveralls.io/github/flarestart/rekv
+[ci-url]: https://travis-ci.org/flarestart/rekv.svg?branch=master
+[npm-image]: https://img.shields.io/npm/v/rekv.svg
+[npm-url]: https://npmjs.org/package/rekv
+[downloads-image]: http://img.shields.io/npm/dm/rekv.svg
+[downloads-url]: https://npmjs.org/package/rekv
