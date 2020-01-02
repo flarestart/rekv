@@ -9,5 +9,6 @@
     "removeComments": true,
     "outDir": "dist",
     "noEmit": true
-  }
+  },
+  "include": ["src/rekv.ts"]
 }

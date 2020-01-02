@@ -232,7 +232,6 @@ describe('rekv', () => {
       return <div>{test}</div>;
     }
     const wrapper = mount(<div><Test1 /><Test2 /></div>)
-    console.log(wrapper);
     await sleep(100);
     act(() => {
       rekv.setState({

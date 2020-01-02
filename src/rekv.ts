@@ -75,10 +75,8 @@ export class Rekv<T extends InitState> {
       s = [];
       s.push(callback);
       this.events[name] = s;
-    } else {
-      if (s.indexOf(callback) < 0) {
-        s.push(callback);
-      }
+    } else if (s.indexOf(callback) < 0) {
+      s.push(callback);
     }
   }
 
@@ -118,9 +116,9 @@ export class Rekv<T extends InitState> {
         const values: any = {};
         item.keys.forEach(key => {
           const mapKey = item.selector[key];
-          if(mapKey === true){
+          if (mapKey === true) {
             values[key] = this.state[key];
-          }else if(typeof mapKey === 'string') {
+          } else if (typeof mapKey === 'string') {
             values[mapKey] = this.state[key];
           }
         });
@@ -208,3 +206,5 @@ export class Rekv<T extends InitState> {
 }
 
 export const rekv = new Rekv<any>();
+
+export default Rekv;

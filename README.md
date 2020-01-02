@@ -23,19 +23,17 @@ React 版本 >= 16.8.0
 
 ### 4. 示例
 
-**准备工作：为全局状态设置一个初始值**
-
-> 建议在入口文件，如 create-react-app 生成的 App.tsx 中，设置 rekv 的初始状态。
+**使用 Rekv 创建一个 store**
 
 ```ts
-import { rekv } from 'rekv';
+// store.ts
+import Rekv from 'rekv';
 
-// setInitState
-// 用于对状态进行初始化，未初始化时，所有的 key 取值都是 undefined
-// 如果 key 已经存在，setInitState 将会忽略掉这个值
-rekv.setInitState({
-  name: 'demo',
-  count: 0,
+export default new Rekv({
+  initState: {
+    name: 'test',
+    count: 0
+  }
 });
 ```
 
@@ -45,11 +43,11 @@ rekv.setInitState({
 
 ```tsx
 import React from 'react';
-import { rekv } from 'rekv';
+import store from './store';
 
 export default function Demo() {
-  const name = rekv.useState('name');
-  const count = rekv.useState('count');
+  const name = store.useState('name');
+  const count = store.useState('count');
 
   return (
     <div>
@@ -63,22 +61,22 @@ export default function Demo() {
 
 ```tsx
 import React from 'react';
-import { rekv } from 'rekv';
+import store from './store';
 
 // 重置计数器
 function reset() {
-  rekv.setState({ count: 0 });
+  store.setState({ count: 0 });
 }
 
 function increment() {
-  rekv.setState(state => ({ count: state.count + 1 }));
+  store.setState(state => ({ count: state.count + 1 }));
 }
 
 function decrement() {
-  rekv.setState(state => ({ count: state.count - 1 }));
+  store.setState(state => ({ count: state.count - 1 }));
 }
 
-export default function Button() {
+export default function Buttons() {
   return (
     <div>
       <button onClick={reset}>reset</button>
@@ -95,25 +93,27 @@ export default function Button() {
 
 ```tsx
 // store.ts
-import { Rekv } from 'rekv';
+import Rekv from 'rekv';
 
 interface InitState {
   name: string;
   age?: number;
 }
 
-export const store = new Rekv<InitState>({
+const store = new Rekv<InitState>({
   initState: {
     name: 'Jack',
-    age: 25,
-  },
+    age: 25
+  }
 });
+
+export default store;
 ```
 
 ```tsx
 // User.ts
 import React from 'react';
-import { store } from './store';
+import store from './store';
 
 export default function User() {
   const name = store.useState('name'); // name 将被推断为 string 类型
@@ -133,21 +133,21 @@ export default function User() {
 
 ```tsx
 import React from 'react';
-import { rekv } from 'rekv';
+import store from './store';
 
 export default class MyComponent extends React.Component {
   state = {
-    nativeCount: 0,
+    nativeCount: 0
   };
 
   componentDidMount() {
     // 订阅 key 为 count 的状态，并使用 this.setState 更新当前组件的 count 状态
-    rekv.bindClassComponent(this, { count: 'nativeCount' });
+    store.bindClassComponent(this, { count: 'nativeCount' });
   }
 
   componentWillUnmount() {
     // 组件退出，取消当前组件的订阅
-    rekv.unbindClassComponent(this);
+    store.unbindClassComponent(this);
   }
 
   render() {
@@ -160,10 +160,10 @@ export default class MyComponent extends React.Component {
 
 ```tsx
 import React from 'react';
-import { rekv } from 'rekv';
+import store from './store';
 
 function Demo() {
-  const count = rekv.useState('count');
+  const count = store.useState('count');
   return <MyComponent count={count} />;
 }
 ```
@@ -171,10 +171,10 @@ function Demo() {
 #### 4.4 获取当前时刻的状态
 
 ```tsx
-import { rekv } from 'rekv';
+import store from './store';
 
 // 获取当前时刻的状态，如果需要订阅数据变化，可以参阅 useState
-const currentState = rekv.getCurrentState();
+const currentState = store.getCurrentState();
 ```
 
 [coverage-image]: https://img.shields.io/coveralls/flarestart/rekv.svg
