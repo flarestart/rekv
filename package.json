@@ -1,6 +1,6 @@
 {
   "name": "rekv",
-  "version": "0.0.8",
+  "version": "1.0.0",
   "main": "dist/rekv.js",
   "author": "flarestart",
   "repository": {
@@ -10,6 +10,14 @@
   "license": "MIT",
   "peerDependencies": {
     "react": "^16.8.0"
+  },
+  "peerDependenciesMeta": {
+    "react-dom": {
+      "optional": true
+    },
+    "react-native": {
+      "optional": true
+    }
   },
   "scripts": {
     "build": "tsc --noEmit false",

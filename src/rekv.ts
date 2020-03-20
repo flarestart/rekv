@@ -20,28 +20,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import { useState, useEffect, Component } from 'react';
+import { useState, Component, useEffect } from 'react';
 
-type EventCallback = (value: any) => void;
-
-interface ComponentInfo {
-  keys: string[];
-  selector: { [key: string]: string | true };
-  component: Component;
+/* istanbul ignore next */
+function noBatchUpdates(fn: () => void) {
+  return fn();
 }
+
+function loadFromReactDOM() {
+  try {
+    const r = require('react-dom');
+    if (typeof r.unstable_batchedUpdates === 'function') {
+      return r.unstable_batchedUpdates;
+    }
+  } catch (e) {
+    // do nothing
+  }
+}
+
+/* istanbul ignore next */
+function loadFromReactNative() {
+  try {
+    const r = require('react-native');
+    if (typeof r.unstable_batchedUpdates === 'function') {
+      return r.unstable_batchedUpdates;
+    }
+  } catch (e) {
+    // do nothing
+  }
+}
+
+const batchUpdates = loadFromReactDOM() || loadFromReactNative() || noBatchUpdates;
+
+type EventCallback = () => void;
 
 interface InitState {
   [key: string]: any;
-}
-
-// check if two array have same values
-function isCross(a: any[], b: any[]): boolean {
-  for (let n = 0; n < a.length; n++) {
-    if (b.indexOf(a[n]) >= 0) {
-      return true;
-    }
-  }
-  return false;
 }
 
 function isPlainObject(obj: any): boolean {
@@ -56,18 +70,17 @@ function isPlainObject(obj: any): boolean {
 }
 
 export class Rekv<T extends InitState> {
-  constructor(options?: { initState: T }) {
-    if (options) {
-      if (!isPlainObject(options.initState)) {
-        throw new Error('init state is not a plain object');
-      }
-      this.state = options.initState;
+  static rekvId = 0;
+  constructor(initState: T) {
+    if (!isPlainObject(initState)) {
+      throw new Error('init state is not a plain object');
     }
+    this.state = initState;
+    Rekv.rekvId++;
   }
 
   private events: { [key: string]: EventCallback[] } = {};
   private state: any = {};
-  private components: ComponentInfo[] = [];
 
   on(name: any, callback: EventCallback): void {
     let s = this.events[name];
@@ -75,8 +88,10 @@ export class Rekv<T extends InitState> {
       s = [];
       s.push(callback);
       this.events[name] = s;
-    } else if (s.indexOf(callback) < 0) {
-      s.push(callback);
+    } else {
+      if (s.indexOf(callback) < 0) {
+        s.push(callback);
+      }
     }
   }
 
@@ -90,8 +105,8 @@ export class Rekv<T extends InitState> {
     }
   }
 
-  setState(param: Partial<T> | ((state: T) => Partial<T>)): void {
-    let kvs: Partial<T>;
+  setState<P extends Partial<T>>(param: P | ((state: T) => P)): void {
+    let kvs: P;
     if (typeof param === 'function') {
       kvs = param(this.state);
     } else {
@@ -101,110 +116,77 @@ export class Rekv<T extends InitState> {
       throw new Error(`setState() only receive an plain object`);
     }
     const keys = Object.keys(kvs);
-    keys.forEach(key => {
-      const value = kvs[key];
-      this.state[key] = value;
-      const callbacks = this.events[key];
-      if (callbacks) {
-        callbacks.forEach(callback => {
-          callback(value);
-        });
-      }
+    keys.forEach((key) => {
+      this.state[key] = kvs[key];
     });
-    this.components.forEach(item => {
-      if (isCross(item.keys, keys)) {
-        const values: any = {};
-        item.keys.forEach(key => {
-          const mapKey = item.selector[key];
-          if (mapKey === true) {
-            values[key] = this.state[key];
-          } else if (typeof mapKey === 'string') {
-            values[mapKey] = this.state[key];
-          }
-        });
-        item.component.setState(values);
-      }
+    batchUpdates(() => {
+      const called: EventCallback[] = [];
+      keys.forEach((key) => {
+        const callbacks = this.events[key];
+        if (callbacks) {
+          callbacks.forEach((callback) => {
+            if (called.indexOf(callback) < 0) {
+              called.push(callback);
+              callback();
+            }
+          });
+        }
+      });
     });
   }
 
-  useState<K extends keyof T>(key: K): T[K] {
-    const [value, setValue] = useState(this.state[key]);
+  useState = <K extends keyof T>(...keys: K[]): Pick<T, K> => {
+    const [value, setValue] = useState(() => {
+      const v: any = {};
+      keys.forEach((key) => (v[key] = this.state[key]));
+      return v;
+    });
 
     useEffect(() => {
-      this.on(key, setValue);
-      return () => {
-        this.off(key, setValue);
+      const updater = () => {
+        const v: any = {};
+        keys.forEach((key) => (v[key] = this.state[key]));
+        setValue(v);
       };
-    }, [key]);
-    return value;
-  }
-
-  // bind React class component
-  bindClassComponent<K extends keyof T>(component: Component, selector: { [_ in K]: string | true }): void {
-    // ignore empty keys
-    const keys = Object.keys(selector);
-    if (keys.length <= 0) {
-      return;
-    }
-    const values: any = {};
-    const s: any = selector;
-    keys.forEach(key => {
-      const v = this.state[key];
-      if (typeof v !== 'undefined') {
-        values[s[key]] = v;
-      }
-    });
-    component.setState(values);
-    // find if component exists
-    let found = false;
-    for (let n = 0; n < this.components.length; n++) {
-      if (this.components[n].component === component) {
-        found = true;
-        break;
-      }
-    }
-    if (!found) {
-      this.components.push({
-        keys,
-        selector,
-        component,
+      keys.forEach((key) => {
+        this.on(key, updater);
       });
-    }
-  }
+      return () => {
+        keys.forEach((key) => this.off(key, updater));
+      };
+    }, keys);
+    return value;
+  };
 
-  unbindClassComponent(component: Component): void {
-    for (let n = 0; n < this.components.length; n++) {
-      if (this.components[n].component === component) {
-        this.components.splice(n, 1);
-        break;
+  classUseState<K extends keyof T>(component: Component, ...keys: K[]): Pick<T, K> {
+    const ret: any = {};
+    const unmount = component.componentWillUnmount;
+
+    const updater = () => {
+      component.forceUpdate();
+    };
+    keys.forEach((key) => {
+      this.on(key, updater);
+      Object.defineProperty(ret, key, {
+        get: () => {
+          return this.state[key];
+        },
+      });
+    });
+    component.componentWillUnmount = () => {
+      keys.forEach((key) => {
+        this.off(key, updater);
+      });
+      if (typeof unmount === 'function') {
+        unmount.call(component);
       }
-    }
+    };
+    return ret;
   }
 
   getCurrentState(): Readonly<T> {
     return this.state;
   }
-
-  setInitState(obj: { [key: string]: any }) {
-    if (!isPlainObject(obj)) {
-      throw new Error('init state is not a plain object');
-    }
-    const kv: any = {};
-    let needChange = false;
-    Object.keys(obj).forEach(key => {
-      // if key
-      if (typeof key === 'undefined' || typeof this.state[key] !== 'undefined') {
-        return;
-      }
-      needChange = true;
-      kv[key] = obj[key];
-    });
-    if (needChange) {
-      this.setState(kv);
-    }
-  }
 }
-
-export const rekv = new Rekv<any>();
 
 export default Rekv;

@@ -7,21 +7,49 @@ Rekv 是一个为 React 函数式组件设计的全局状态管理器
 [![NPM version][npm-image]][npm-url]
 [![Downloads][downloads-image]][downloads-url]
 
-### 1. 特色
+### 目录
 
+- [Demo](#demo)
+- [特色](#feature)
+- [更新日志](#update-log)
+- [安装方式](#install)
+- [函数式组件使用方式](#using-in-function-component)
+- [类组件使用使用方式](#using-in-class-component)
+- [使用 TypeScript 类型检查](#ts-check)
+- [获取当前时刻的状态](#get-current-state)
+
+### Demo<a id="demo"></a>
+
+Preview: https://csb-s8sbu.netlify.com/
+CodeSandbox: https://codesandbox.io/s/strange-antonelli-s8sbu
+
+### 特色<a id="feature"></a>
+
+- 一个极简但易用的状态管理器
 - 高性能，使用 Key-Value 而不是树型结构来处理状态
 - 无 Redux，无依赖，仅 state
+- 不使用高阶组件（HOC）
 - TypeScript 友好
 
-### 2. 使用要求
+### 更新日志<a id="update-log"></a>
 
-React 版本 >= 16.8.0
+#### 1.0.0
 
-### 3. 安装
+**重要更新 使用方式与低版本不兼容**
 
-> yarn add rekv
+- 性能提升、支持异步批量更新状态，使用 `unstable_batchedUpdates` 进行状态异步更新
+- 类组件使用方式简化 `bindClassComponent` 方法 变更为 `classUseState`，删除 `unbindClassComponent` 方法
+- useState 可使用多个状态名 `useState` 和 `classUseState` 支持一行获取多个状态名称
 
-### 4. 示例
+### 安装方式<a id="install"></a>
+
+```bash
+yarn add rekv
+```
+
+版本要求：React 版本 >= 16.8.0
+
+### 函数式组件使用方式<a id="using-in-function-component"></a>
 
 **使用 Rekv 创建一个 store**
 
@@ -30,14 +58,10 @@ React 版本 >= 16.8.0
 import Rekv from 'rekv';
 
 export default new Rekv({
-  initState: {
-    name: 'test',
-    count: 0
-  }
+  name: 'test',
+  count: 0,
 });
 ```
-
-#### 4.1 在函数式组件中使用
 
 **使用全局状态**
 
@@ -46,8 +70,7 @@ import React from 'react';
 import store from './store';
 
 export default function Demo() {
-  const name = store.useState('name');
-  const count = store.useState('count');
+  const { name, count } = store.useState('name', 'count');
 
   return (
     <div>
@@ -69,11 +92,11 @@ function reset() {
 }
 
 function increment() {
-  store.setState(state => ({ count: state.count + 1 }));
+  store.setState((state) => ({ count: state.count + 1 }));
 }
 
 function decrement() {
-  store.setState(state => ({ count: state.count - 1 }));
+  store.setState((state) => ({ count: state.count - 1 }));
 }
 
 export default function Buttons() {
@@ -87,7 +110,22 @@ export default function Buttons() {
 }
 ```
 
-#### 4.2 创建一个 Rekv 实例，并进行 TypeScript 类型检查
+### 在类组件中使用<a id="using-in-class-component"></a>
+
+```tsx
+import React, { Component } from 'react';
+import store from './store';
+
+export default class MyComponent extends Component {
+  s = store.classUseState(this, 'count');
+
+  render() {
+    return <div>{this.s.count}</div>;
+  }
+}
+```
+
+### 使用 TypeScript 类型检查<a id="ts-check"></a>
 
 **注意：这里使用的是大写的 Rekv，小写的 rekv 是 Rekv 的一个实例**
 
@@ -101,10 +139,8 @@ interface InitState {
 }
 
 const store = new Rekv<InitState>({
-  initState: {
-    name: 'Jack',
-    age: 25
-  }
+  name: 'Jack',
+  age: 25,
 });
 
 export default store;
@@ -116,8 +152,7 @@ import React from 'react';
 import store from './store';
 
 export default function User() {
-  const name = store.useState('name'); // name 将被推断为 string 类型
-  const age = store.useState('age'); // age 将被推断为 number | undefined
+  const { name, age } = store.useState('name', 'age'); // name 将被推断为 string 类型
 
   return (
     <div>
@@ -127,48 +162,7 @@ export default function User() {
 }
 ```
 
-#### 4.3 在 React 类组件中使用
-
-**方式 1：通过订阅数据变化，并更新当前组件的状态**
-
-```tsx
-import React from 'react';
-import store from './store';
-
-export default class MyComponent extends React.Component {
-  state = {
-    nativeCount: 0
-  };
-
-  componentDidMount() {
-    // 订阅 key 为 count 的状态，并使用 this.setState 更新当前组件的 count 状态
-    store.bindClassComponent(this, { count: 'nativeCount' });
-  }
-
-  componentWillUnmount() {
-    // 组件退出，取消当前组件的订阅
-    store.unbindClassComponent(this);
-  }
-
-  render() {
-    return <div>{this.state.nativeCount}</div>;
-  }
-}
-```
-
-**方式 2：通过函数式组件包裹类组件**
-
-```tsx
-import React from 'react';
-import store from './store';
-
-function Demo() {
-  const count = store.useState('count');
-  return <MyComponent count={count} />;
-}
-```
-
-#### 4.4 获取当前时刻的状态
+### 获取当前时刻的状态<a id="get-current-state"></a>
 
 ```tsx
 import store from './store';
