@@ -30,7 +30,7 @@ function noBatchUpdates(fn: () => void) {
 function loadFromReactDOM() {
   try {
     const r = require('react-dom');
-    if (typeof r.unstable_batchedUpdates === 'function') {
+    if (r && typeof r.unstable_batchedUpdates === 'function') {
       return r.unstable_batchedUpdates;
     }
   } catch (e) {
@@ -42,17 +42,17 @@ function loadFromReactDOM() {
 function loadFromReactNative() {
   try {
     const r = require('react-native');
-    if (typeof r.unstable_batchedUpdates === 'function') {
+    if (r && typeof r.unstable_batchedUpdates === 'function') {
       return r.unstable_batchedUpdates;
     }
   } catch (e) {
     // do nothing
   }
 }
-
+/* istanbul ignore next */
 const batchUpdates = loadFromReactDOM() || loadFromReactNative() || noBatchUpdates;
 
-type EventCallback = () => void;
+type EventCallback = (v: any) => void;
 
 interface InitState {
   [key: string]: any;
@@ -77,21 +77,20 @@ export class Rekv<T extends InitState> {
     this.state = initState;
   }
 
-  private events: { [key: string]: EventCallback[] } = {};
+  events: any = {};
+  private updateId = 0;
   private state: any = {};
 
-  on(name: any, callback: EventCallback): void {
+  on<K extends keyof T>(name: K, callback: EventCallback): void {
     let s = this.events[name];
     if (!s) {
       this.events[name] = [callback];
-    } else {
-      if (s.indexOf(callback) < 0) {
-        s.push(callback);
-      }
+    } else if (s.indexOf(callback) < 0) {
+      s.push(callback);
     }
   }
 
-  off(name: any, callback: EventCallback): void {
+  off<K extends keyof T>(name: K, callback: EventCallback): void {
     const s = this.events[name];
     if (s) {
       const index = s.indexOf(callback);
@@ -101,8 +100,8 @@ export class Rekv<T extends InitState> {
     }
   }
 
-  setState<P extends Partial<T>>(param: P | ((state: T) => P)): void {
-    let kvs: P;
+  setState(param: Partial<T> | ((s: T) => Partial<T>)): void {
+    let kvs: Partial<T>;
     if (typeof param === 'function') {
       kvs = param(this.state);
     } else {
@@ -112,26 +111,35 @@ export class Rekv<T extends InitState> {
       throw new Error(`setState() only receive an plain object`);
     }
     const keys = Object.keys(kvs);
+    const needUpdateKeys: string[] = [];
     keys.forEach((key) => {
-      this.state[key] = kvs[key];
+      if (this.state[key] !== kvs[key]) {
+        needUpdateKeys.push(key);
+        this.state[key] = kvs[key];
+      }
     });
     batchUpdates(() => {
-      const called: EventCallback[] = [];
-      keys.forEach((key) => {
-        const callbacks = this.events[key];
+      needUpdateKeys.forEach((key: any) => {
+        const callbacks : any[] = this.events[key];
         if (callbacks) {
           callbacks.forEach((callback) => {
-            if (called.indexOf(callback) < 0) {
-              called.push(callback);
-              callback();
+            // check if callback has been updated
+            if (callback.updateId !== this.updateId) {
+              callback.updateId = this.updateId;
+              callback(this.state[key]);
             }
           });
         }
       });
     });
+    this.updateId++;
+    /* istanbul ignore next */
+    if (this.updateId >= Number.MAX_SAFE_INTEGER) {
+      this.updateId = 0;
+    }
   }
 
-  useState = <K extends keyof T>(...keys: K[]): Pick<T, K> => {
+  useState = <K extends keyof T>(...keys: K[]): Readonly<Pick<T, K>> => {
     const [value, setValue] = useState(() => {
       const v: any = {};
       keys.forEach((key) => (v[key] = this.state[key]));
@@ -154,7 +162,7 @@ export class Rekv<T extends InitState> {
     return value;
   };
 
-  classUseState<K extends keyof T>(component: Component, ...keys: K[]): Pick<T, K> {
+  classUseState<K extends keyof T>(component: Component, ...keys: K[]): Readonly<Pick<T, K>> {
     const ret: any = {};
     const unmount = component.componentWillUnmount;
     const updater = () => {

@@ -10,36 +10,19 @@ Rekv 是一个为 React 函数式组件设计的全局状态管理器
 ### 目录
 
 - [Demo](#demo)
-- [特色](#feature)
-- [更新日志](#update-log)
 - [安装方式](#install)
 - [函数式组件使用方式](#using-in-function-component)
 - [类组件使用使用方式](#using-in-class-component)
 - [使用 TypeScript 类型检查](#ts-check)
 - [获取当前时刻的状态](#get-current-state)
+- [订阅状态变更](#subscribe)
+- [特色](#feature)
+- [更新日志](#update-log)
 
 ### Demo<a id="demo"></a>
 
-Preview: https://csb-s8sbu.netlify.com/
-CodeSandbox: https://codesandbox.io/s/strange-antonelli-s8sbu
-
-### 特色<a id="feature"></a>
-
-- 一个极简但易用的状态管理器
-- 高性能，使用 Key-Value 而不是树型结构来处理状态
-- 无 Redux，无依赖，仅 state
-- 不使用高阶组件（HOC）
-- TypeScript 友好
-
-### 更新日志<a id="update-log"></a>
-
-#### 1.0.0
-
-**重要更新 使用方式与低版本不兼容**
-
-- 性能提升、支持异步批量更新状态，使用 `unstable_batchedUpdates` 进行状态异步更新
-- 类组件使用方式简化 `bindClassComponent` 方法 变更为 `classUseState`，删除 `unbindClassComponent` 方法
-- useState 可使用多个状态名 `useState` 和 `classUseState` 支持一行获取多个状态名称
+预览地址: https://csb-s8sbu.netlify.com/
+在线编辑: https://codesandbox.io/s/strange-antonelli-s8sbu
 
 ### 安装方式<a id="install"></a>
 
@@ -170,6 +153,37 @@ import store from './store';
 // 获取当前时刻的状态，如果需要订阅数据变化，可以参阅 useState
 const currentState = store.getCurrentState();
 ```
+
+### 订阅状态变更<a id="subscribe"></a>
+
+```tsx
+import store from './store';
+
+function change(age) {
+  console.log('age changed', age);
+}
+
+store.on('age', change);
+store.off('age', change);
+```
+
+### 特色<a id="feature"></a>
+
+- 一个极简但易用的状态管理器
+- 高性能，使用 Key-Value 而不是树型结构来处理状态
+- 无 Redux，无依赖，仅 state
+- 不使用高阶组件（HOC）
+- TypeScript 友好
+
+### 更新日志<a id="update-log"></a>
+
+#### 1.0.0
+
+**重要更新 使用方式与低版本不兼容**
+
+- 性能提升、支持异步批量更新状态，使用 `unstable_batchedUpdates` 进行状态异步更新
+- 类组件使用方式简化 `bindClassComponent` 方法 变更为 `classUseState`，删除 `unbindClassComponent` 方法
+- useState 可使用多个状态名 `useState` 和 `classUseState` 支持一行获取多个状态名称
 
 [coverage-image]: https://img.shields.io/coveralls/flarestart/rekv.svg
 [coverage-url]: https://coveralls.io/github/flarestart/rekv

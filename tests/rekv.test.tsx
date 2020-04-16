@@ -103,13 +103,13 @@ describe('rekv', () => {
     await sleep(100);
     rekv.setState({
       count: 1,
-      test: 'test',
+      test: 'testnew',
     });
     rekv.setState({
-      foo: 'bar',
+      foo: 'foonew',
     });
     await sleep(100);
-    expect(wrapper.find('div').text()).to.equal('1,test');
+    expect(wrapper.find('div').text()).to.equal('1,testnew');
   });
 
   it('unmount hook component', async () => {
@@ -144,7 +144,16 @@ describe('rekv', () => {
     });
     function Box() {
       const { visible } = rekv.useState('visible');
-      return <div>{visible && <Test />}</div>;
+      return (
+        <div>
+          {visible && (
+            <>
+              <Test />
+              <Test2 />
+            </>
+          )}
+        </div>
+      );
     }
     class Test extends React.Component {
       s = rekv.classUseState(this, 'test');
@@ -152,6 +161,13 @@ describe('rekv', () => {
       componentWillUnmount() {
         // do nothing
       }
+
+      render() {
+        return <div>{this.s.test}</div>;
+      }
+    }
+    class Test2 extends React.Component {
+      s = rekv.classUseState(this, 'test');
 
       render() {
         return <div>{this.s.test}</div>;
@@ -194,5 +210,90 @@ describe('rekv', () => {
     });
     await sleep(100);
     expect(wrapper.html()).to.equal('<div><div>demo</div><div>demo</div></div>');
+  });
+  it('on', async () => {
+    const rekv = new Rekv({
+      foo: 'bar',
+    });
+    const s: any = rekv;
+    const updater = () => {};
+    rekv.on('foo', updater);
+    rekv.on('foo', updater);
+    expect(s.events['foo'].length).to.equal(1);
+  });
+  it('off', async () => {
+    const rekv = new Rekv({
+      foo: 'bar',
+    });
+    const s: any = rekv;
+    const updater1 = () => {};
+    const updater2 = () => {};
+    rekv.off('foo', () => {});
+    rekv.on('foo', updater1);
+    rekv.off('foo', updater2);
+    expect(rekv.events['foo'].length).to.equal(1);
+  });
+  it('on value', async () => {
+    const rekv = new Rekv({
+      foo: 'bar',
+    });
+    let value = '';
+    rekv.on('foo', (v) => {
+      value = v;
+    });
+    rekv.setState({ foo: 'new' });
+    expect(value).to.equal('new');
+  });
+  it('FunctionComponent ignore same state', async () => {
+    const rekv = new Rekv({
+      test: 'test',
+    });
+    let count = 0;
+    function Test() {
+      const { test } = rekv.useState('test');
+      count++;
+      return <div>{test}</div>;
+    }
+    mount(
+      <div>
+        <Test />
+      </div>
+    );
+    for (let n = 0; n < 10; n++) {
+      act(() => {
+        rekv.setState({
+          test: 'demo',
+        });
+      });
+      await sleep(100);
+    }
+    expect(count).to.equal(2);
+  });
+  it('ClassComponent ignore same state', async () => {
+    const rekv = new Rekv({
+      test: 'test',
+    });
+    let count = 0;
+    class Test extends React.Component {
+      s = rekv.classUseState(this, 'test');
+      render() {
+        count++;
+        return <div>{this.s.test}</div>;
+      }
+    }
+    mount(
+      <div>
+        <Test />
+      </div>
+    );
+    for (let n = 0; n < 10; n++) {
+      act(() => {
+        rekv.setState({
+          test: 'demo',
+        });
+      });
+      await sleep(100);
+    }
+    expect(count).to.equal(2);
   });
 });
