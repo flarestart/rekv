@@ -70,13 +70,11 @@ function isPlainObject(obj: any): boolean {
 }
 
 export class Rekv<T extends InitState> {
-  static rekvId = 0;
   constructor(initState: T) {
     if (!isPlainObject(initState)) {
       throw new Error('init state is not a plain object');
     }
     this.state = initState;
-    Rekv.rekvId++;
   }
 
   private events: { [key: string]: EventCallback[] } = {};
@@ -85,9 +83,7 @@ export class Rekv<T extends InitState> {
   on(name: any, callback: EventCallback): void {
     let s = this.events[name];
     if (!s) {
-      s = [];
-      s.push(callback);
-      this.events[name] = s;
+      this.events[name] = [callback];
     } else {
       if (s.indexOf(callback) < 0) {
         s.push(callback);
@@ -161,7 +157,6 @@ export class Rekv<T extends InitState> {
   classUseState<K extends keyof T>(component: Component, ...keys: K[]): Pick<T, K> {
     const ret: any = {};
     const unmount = component.componentWillUnmount;
-
     const updater = () => {
       component.forceUpdate();
     };
