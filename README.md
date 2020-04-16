@@ -1,28 +1,42 @@
 # Rekv
 
-Rekv 是一个为 React 函数式组件设计的全局状态管理器
+Rekv 是一个为 React 函数式组件设计的全局状态管理器，且对类组件具有很好的兼容
 
 [![Travis CI][ci-image]][ci-url]
 [![Coveralls][coverage-image]][coverage-url]
 [![NPM version][npm-image]][npm-url]
 [![Downloads][downloads-image]][downloads-url]
 
+### 特色<a id="feature"></a>
+
+- 一个简单但易用的状态管理器，一个文件，仅 200 余行
+- 高性能，使用 Key-Value 而不是树型结构来处理状态
+- 支持 TypeScript 静态检查
+- 支持状态变更事件委托（拦截器）
+- 无 Redux，无依赖，仅 state
+- 不使用高阶组件（HOC）
+
 ### 目录
 
 - [Demo](#demo)
+  - [Todo List](https://csb-s8sbu.netlify.app/#/)
+  - [计数器](https://csb-s8sbu.netlify.app/#/counter)
+  - [性能测试](https://csb-s8sbu.netlify.app/#/benchmark)
 - [安装方式](#install)
-- [函数式组件使用方式](#using-in-function-component)
-- [类组件使用使用方式](#using-in-class-component)
-- [使用 TypeScript 类型检查](#ts-check)
-- [获取当前时刻的状态](#get-current-state)
-- [订阅状态变更](#subscribe)
-- [特色](#feature)
+- [快速使用](#quick-use)
+- [API](#api)
+- [高级用法](#advanced-use)
+  - [函数式组件使用方式](#using-in-function-component)
+  - [类组件使用使用方式](#using-in-class-component)
+  - [使用 TypeScript 类型检查](#ts-check)
+  - [获取当前时刻的状态](#get-current-state)
+  - [事件委托-拦截器](#delegate)
 - [更新日志](#update-log)
 
 ### Demo<a id="demo"></a>
 
-预览地址: https://csb-s8sbu.netlify.com/
-在线编辑: https://codesandbox.io/s/strange-antonelli-s8sbu
+- 预览地址: https://csb-s8sbu.netlify.app/
+- 在线编辑: https://codesandbox.io/s/strange-antonelli-s8sbu
 
 ### 安装方式<a id="install"></a>
 
@@ -32,7 +46,120 @@ yarn add rekv
 
 版本要求：React 版本 >= 16.8.0
 
-### 函数式组件使用方式<a id="using-in-function-component"></a>
+### 快速使用<a id="quick-use"></a>
+
+> 适用于小型项目，只需要一个全局状态
+
+```tsx
+// Demo.tsx
+import React from 'react';
+import { globalStore } from 'rekv';
+
+export default function Demo() {
+  // 使用状态
+  const { name } = globalStore.useState('name');
+  return <div>Hello, {name}</div>;
+}
+
+// 在另一个文件，或其他地方调用
+globalStore.setState({ name: 'Jack' });
+```
+
+### API
+
+- class Rekv
+
+  - new Rekv(object)
+
+    > 创建一个 `Rekv` 的实例
+
+  - delegate **全局事件委托**<a id="global-delegate"></a>
+
+    > 全局事件委托，可设置所有 `Rekv` 实例的事件委托
+
+    - beforeUpdate 状态更新前的事件，可对设置的状态进行拦截，检查并修改
+
+      ```ts
+      import Rekv from 'rekv';
+
+      // 所有 Rekv 的实例，在更新前都将执行此方法
+      // state: 使用 setState() 更新的状态值
+      // store: 需要更新状态的 store
+      // 返回值: 如果需要拦截并修改 setState 的值，可返回一个新的对象，替换 setState 的值
+      Rekv.delegate.beforeUpdate = ({ state, store }) => {
+        console.log(store.currentState, state);
+        // return state;	// 可选，如果返回了新的值，则可实现对状态的拦截修改
+      };
+      ```
+
+    - afterUpdate 状态更新后的事件，返回已更新的状态
+
+      ```tsx
+      import Rekv from 'rekv';
+
+      // 所有的 Rekv 实例，在完成状态更新后，执行此方法
+      // state: 已更新的状态（这里已过滤掉未发生改变的状态）
+      // store: 已更新状态的 store
+      Rekv.delegate.afterUpdate = ({ state, store }) => {
+        console.log(store.currentState, state);
+      };
+      ```
+
+- globalStore
+
+  > globalStore 是一个默认创建的 `Rekv` 类的实例，可使用 `Rekv` 实例的所有方法与属性
+
+- Rekv 实例属性与方法
+
+  - .delegate 使用方式与 [全局事件委托](#global-delegate) 相同
+
+    > 实例的事件委托，如果和全局的事件委托同时设置了，会**优先执行实例的事件委托**，再执行全局的事件委托，使用方式用全局事件委托相同
+
+  - .currentState 获取当前时刻实例的状态
+
+  - .getCurrentState() 与 `.currentState` 功能相同
+
+  - .useState()
+
+    > 在函数式组件中订阅并使用状态，通过设置多个参数，可在一行使用多个状态
+
+    ```tsx
+    import React from 'react';
+    import store from './store';
+
+    function Demo() {
+      const s = store.useState('foo', 'bar');
+
+      return (
+        <div>
+          {s.foo}, {s.bar}
+        </div>
+      );
+    }
+    ```
+
+  - .setState() [对状态进行更新]()
+
+    ```tsx
+    import store from './store';
+    // 方法1: 直接设置状态
+    store.setState({ count: 1 });
+    // 方法2: 使用一个回调函数，获取当前状态，并返回新的状态
+    // state: 当前状态
+    store.setState((state) => {
+      return {
+        count: state.count + 1,
+      };
+    });
+    ```
+
+  - .classUseState() [在类组件中使用状态](#using-in-class-component)
+
+### 高级用法<a id="advanced-use"></a>
+
+> 适用于多个 Store 的情况，可对每个状态进行 TypeScript 静态检查
+
+#### 函数式组件使用方式<a id="using-in-function-component"></a>
 
 **使用 Rekv 创建一个 store**
 
@@ -46,7 +173,7 @@ export default new Rekv({
 });
 ```
 
-**使用全局状态**
+**使用状态**
 
 ```tsx
 import React from 'react';
@@ -93,7 +220,7 @@ export default function Buttons() {
 }
 ```
 
-### 在类组件中使用<a id="using-in-class-component"></a>
+#### 在类组件中使用<a id="using-in-class-component"></a>
 
 ```tsx
 import React, { Component } from 'react';
@@ -108,9 +235,7 @@ export default class MyComponent extends Component {
 }
 ```
 
-### 使用 TypeScript 类型检查<a id="ts-check"></a>
-
-**注意：这里使用的是大写的 Rekv，小写的 rekv 是 Rekv 的一个实例**
+#### 使用 TypeScript 类型检查<a id="ts-check"></a>
 
 ```tsx
 // store.ts
@@ -135,7 +260,9 @@ import React from 'react';
 import store from './store';
 
 export default function User() {
-  const { name, age } = store.useState('name', 'age'); // name 将被推断为 string 类型
+  // name 将被推断为 string 类型
+  // age 将被推断为 number | undefined 类型
+  const { name, age } = store.useState('name', 'age');
 
   return (
     <div>
@@ -145,37 +272,41 @@ export default function User() {
 }
 ```
 
-### 获取当前时刻的状态<a id="get-current-state"></a>
+#### 获取当前时刻的状态<a id="get-current-state"></a>
 
 ```tsx
 import store from './store';
 
-// 获取当前时刻的状态，如果需要订阅数据变化，可以参阅 useState
-const currentState = store.getCurrentState();
+// 获取当前时刻的状态
+store.currentState;
+// 或
+store.getCurrentState(); // 兼容旧版本的 API
 ```
 
-### 订阅状态变更<a id="subscribe"></a>
+#### 事件委托、拦截器<a id="delegate"></a>
 
 ```tsx
 import store from './store';
 
-function change(age) {
-  console.log('age changed', age);
-}
-
-store.on('age', change);
-store.off('age', change);
+store.delegate = {
+  beforeUpdate: ({ state }) => {
+    console.log('beforeUpdate', state);
+    // 可在这里拦截 setState 的值，并进行修改
+    return state;
+  },
+  afterUpdate: ({ state }) => {
+    // afterUpdate 的 state 只包含了需要更新的状态
+    console.log('afterUpdate', state);
+  },
+};
 ```
-
-### 特色<a id="feature"></a>
-
-- 一个极简但易用的状态管理器
-- 高性能，使用 Key-Value 而不是树型结构来处理状态
-- 无 Redux，无依赖，仅 state
-- 不使用高阶组件（HOC）
-- TypeScript 友好
 
 ### 更新日志<a id="update-log"></a>
+
+#### 1.1.0
+
+- 添加快速使用方式，可直接使用 globalStore
+- 添加事件委托 `beforeUpdate` 和 `afterUpdate`
 
 #### 1.0.0
 

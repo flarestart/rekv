@@ -69,29 +69,37 @@ function isPlainObject(obj: any): boolean {
   return Object.getPrototypeOf(obj) === proto;
 }
 
+interface RekvDelegate<T, K> {
+  beforeUpdate?: (e: { store: T; state: Readonly<K> }) => K | void;
+  afterUpdate?: (e: { store: T; state: Readonly<K> }) => void;
+}
+
 export class Rekv<T extends InitState> {
+  public static delegate: RekvDelegate<Rekv<any>, any> = {};
+  public delegate: RekvDelegate<this, Partial<T>> = {};
+  private _events: any = {};
+  private _updateId = 0;
+  private _state: any = {};
+  private _inDelegate = false;
+
   constructor(initState: T) {
     if (!isPlainObject(initState)) {
       throw new Error('init state is not a plain object');
     }
-    this.state = initState;
+    this._state = initState;
   }
 
-  events: any = {};
-  private updateId = 0;
-  private state: any = {};
-
   on<K extends keyof T>(name: K, callback: EventCallback): void {
-    let s = this.events[name];
+    const s = this._events[name];
     if (!s) {
-      this.events[name] = [callback];
+      this._events[name] = [callback];
     } else if (s.indexOf(callback) < 0) {
       s.push(callback);
     }
   }
 
   off<K extends keyof T>(name: K, callback: EventCallback): void {
-    const s = this.events[name];
+    const s = this._events[name];
     if (s) {
       const index = s.indexOf(callback);
       if (index >= 0) {
@@ -103,53 +111,85 @@ export class Rekv<T extends InitState> {
   setState(param: Partial<T> | ((s: T) => Partial<T>)): void {
     let kvs: Partial<T>;
     if (typeof param === 'function') {
-      kvs = param(this.state);
+      kvs = param(this._state);
     } else {
       kvs = param;
+    }
+    if (!this._inDelegate) {
+      this._inDelegate = true;
+      if (this.delegate && typeof this.delegate.beforeUpdate === 'function') {
+        const ret = this.delegate.beforeUpdate({ store: this, state: kvs });
+        if (ret) {
+          kvs = ret;
+        }
+      }
+      if (Rekv.delegate && typeof Rekv.delegate.beforeUpdate === 'function') {
+        const ret = Rekv.delegate.beforeUpdate({ store: this, state: kvs });
+        if (ret) {
+          kvs = ret;
+        }
+      }
+      this._inDelegate = false;
     }
     if (!isPlainObject(kvs)) {
       throw new Error(`setState() only receive an plain object`);
     }
     const keys = Object.keys(kvs);
     const needUpdateKeys: string[] = [];
+    const updatedValues: any = {};
     keys.forEach((key) => {
-      if (this.state[key] !== kvs[key]) {
+      if (this._state[key] !== kvs[key]) {
         needUpdateKeys.push(key);
-        this.state[key] = kvs[key];
+        updatedValues[key] = kvs[key];
+        this._state[key] = kvs[key];
       }
     });
     batchUpdates(() => {
       needUpdateKeys.forEach((key: any) => {
-        const callbacks : any[] = this.events[key];
+        const callbacks: any[] = this._events[key];
         if (callbacks) {
           callbacks.forEach((callback) => {
             // check if callback has been updated
-            if (callback.updateId !== this.updateId) {
-              callback.updateId = this.updateId;
-              callback(this.state[key]);
+            if (callback.updateId !== this._updateId) {
+              callback.updateId = this._updateId;
+              callback(this._state[key]);
             }
           });
         }
       });
     });
-    this.updateId++;
+    this._updateId++;
     /* istanbul ignore next */
-    if (this.updateId >= Number.MAX_SAFE_INTEGER) {
-      this.updateId = 0;
+    if (this._updateId >= Number.MAX_SAFE_INTEGER) {
+      this._updateId = 0;
+    }
+    if (!this._inDelegate) {
+      this._inDelegate = true;
+      if (this.delegate && typeof this.delegate.afterUpdate === 'function') {
+        this.delegate.afterUpdate({ store: this, state: updatedValues });
+      }
+      if (Rekv.delegate && typeof Rekv.delegate.afterUpdate === 'function') {
+        Rekv.delegate.afterUpdate({ store: this, state: updatedValues });
+      }
+      this._inDelegate = false;
     }
   }
 
   useState = <K extends keyof T>(...keys: K[]): Readonly<Pick<T, K>> => {
     const [value, setValue] = useState(() => {
       const v: any = {};
-      keys.forEach((key) => (v[key] = this.state[key]));
+      keys.forEach((key) => {
+        v[key] = this._state[key];
+      });
       return v;
     });
 
     useEffect(() => {
       const updater = () => {
         const v: any = {};
-        keys.forEach((key) => (v[key] = this.state[key]));
+        keys.forEach((key) => {
+          v[key] = this._state[key];
+        });
         setValue(v);
       };
       keys.forEach((key) => {
@@ -172,7 +212,7 @@ export class Rekv<T extends InitState> {
       this.on(key, updater);
       Object.defineProperty(ret, key, {
         get: () => {
-          return this.state[key];
+          return this._state[key];
         },
       });
     });
@@ -187,9 +227,14 @@ export class Rekv<T extends InitState> {
     return ret;
   }
 
+  get currentState(): Readonly<T> {
+    return this._state;
+  }
+
   getCurrentState(): Readonly<T> {
-    return this.state;
+    return this._state;
   }
 }
 
 export default Rekv;
+export const globalStore = new Rekv<any>({});
