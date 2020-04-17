@@ -18,7 +18,7 @@ describe('rekv', () => {
       test: 'test',
       foo: 'bar',
     });
-    expect(rekv.getCurrentState()).to.contains({ foo: 'bar', test: 'test' });
+    expect(rekv.currentState).to.contains({ foo: 'bar', test: 'test' });
   });
   it('new Rekv(undefined) will throw error', () => {
     expect(() => {
@@ -34,6 +34,26 @@ describe('rekv', () => {
     const rekv = new Rekv({
       test: 'test',
     });
+    rekv.setState({
+      test: 'demo',
+    });
+    expect(rekv.currentState).to.contains({ test: 'demo' });
+  });
+  it('.currentState', () => {
+    const rekv = new Rekv({
+      test: 'test',
+    });
+    expect(rekv.currentState).to.contains({ test: 'test' });
+    rekv.setState({
+      test: 'demo',
+    });
+    expect(rekv.currentState).to.contains({ test: 'demo' });
+  });
+  it('.getCurrentState()', () => {
+    const rekv = new Rekv({
+      test: 'test',
+    });
+    expect(rekv.getCurrentState()).to.contains({ test: 'test' });
     rekv.setState({
       test: 'demo',
     });
@@ -60,7 +80,7 @@ describe('rekv', () => {
         };
       });
     }
-    expect(rekv.getCurrentState().count).to.equal(10);
+    expect(rekv.currentState.count).to.equal(10);
   });
   it('.useState()', async () => {
     await act(async () => {
@@ -219,7 +239,7 @@ describe('rekv', () => {
     const updater = () => {};
     rekv.on('foo', updater);
     rekv.on('foo', updater);
-    expect(s.events['foo'].length).to.equal(1);
+    expect(s._events['foo'].length).to.equal(1);
   });
   it('off', async () => {
     const rekv = new Rekv({
@@ -231,7 +251,7 @@ describe('rekv', () => {
     rekv.off('foo', () => {});
     rekv.on('foo', updater1);
     rekv.off('foo', updater2);
-    expect(rekv.events['foo'].length).to.equal(1);
+    expect(s._events['foo'].length).to.equal(1);
   });
   it('on value', async () => {
     const rekv = new Rekv({
