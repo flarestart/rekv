@@ -132,7 +132,7 @@ export class Rekv<T extends InitState> {
       this._inDelegate = false;
     }
     if (!isPlainObject(kvs)) {
-      throw new Error(`setState() only receive an plain object`);
+      throw new Error('setState() only receive an plain object');
     }
     const keys = Object.keys(kvs);
     const needUpdateKeys: string[] = [];
@@ -150,8 +150,8 @@ export class Rekv<T extends InitState> {
         if (callbacks) {
           callbacks.forEach((callback) => {
             // check if callback has been updated
-            if (callback.updateId !== this._updateId) {
-              callback.updateId = this._updateId;
+            if (callback._updateId !== this._updateId) {
+              callback._updateId = this._updateId;
               callback(this._state[key]);
             }
           });
@@ -211,9 +211,7 @@ export class Rekv<T extends InitState> {
     keys.forEach((key) => {
       this.on(key, updater);
       Object.defineProperty(ret, key, {
-        get: () => {
-          return this._state[key];
-        },
+        get: () => this._state[key],
       });
     });
     component.componentWillUnmount = () => {

@@ -1,54 +1,56 @@
 # Rekv
 
-Rekv 是一个为 React 函数式组件设计的全局状态管理器，且对类组件具有很好的兼容
+[中文文档](./README_CN.md)
+
+Rekv is a global state manager design for React Hooks and has good compatibility with Class Component.
 
 [![Travis CI][ci-image]][ci-url]
 [![Coveralls][coverage-image]][coverage-url]
 [![NPM version][npm-image]][npm-url]
 [![Downloads][downloads-image]][downloads-url]
 
-### 特色<a id="feature"></a>
+### Feature<a id="feature"></a>
 
-- 一个简单但易用的状态管理器，一个文件，仅 200 余行
-- 高性能，使用 Key-Value 而不是树型结构来处理状态
-- 支持 TypeScript 静态检查
-- 支持状态变更事件委托（拦截器）
-- 无 Redux，无依赖，仅 state
-- 不使用高阶组件（HOC）
+- A simple but easy-to-use state manager, a file, only about 200 lines
+- High performance, use Key-Value instead of tree structure to handle state
+- Support TypeScript static check
+- Support state change event delegation (interceptor)
+- No Redux, no dependencies, only state
+- Does not use higher-order components (HOC)
 
-### 目录
+### Table of Contents
 
 - [Demo](#demo)
   - [Todo List](https://csb-s8sbu.netlify.app/#/)
-  - [计数器](https://csb-s8sbu.netlify.app/#/counter)
-  - [性能测试](https://csb-s8sbu.netlify.app/#/benchmark)
-- [安装方式](#install)
-- [快速使用](#quick-use)
+  - [Counter](https://csb-s8sbu.netlify.app/#/counter)
+  - [Benchmark](https://csb-s8sbu.netlify.app/#/benchmark) / [Old Version v0.0.x Benchmark](https://csb-byl1x.netlify.app/)
+- [Installation](#install)
+- [Quickstart](#quick-use)
 - [API](#api)
-- [高级用法](#advanced-use)
-  - [函数式组件使用方式](#using-in-function-component)
-  - [类组件使用使用方式](#using-in-class-component)
-  - [使用 TypeScript 类型检查](#ts-check)
-  - [获取当前时刻的状态](#get-current-state)
-  - [事件委托-拦截器](#delegate)
-- [更新日志](#update-log)
+- [Advanced usage](#advanced-use)
+  - [Use in Functional Component](#use-in-function-component)
+  - [Use in Class Component](#use-in-class-component)
+  - [Use TypeScript type checking](#ts-check)
+  - [Get the current state](#get-current-state)
+  - [Event delegate and interceptor](#delegate)
+- [Update Log](#update-log)
 
 ### Demo<a id="demo"></a>
 
-- 预览地址: https://csb-s8sbu.netlify.app/
-- 在线编辑: https://codesandbox.io/s/strange-antonelli-s8sbu
+- Preview: https://csb-s8sbu.netlify.app/
+- Online Editor: https://codesandbox.io/s/strange-antonelli-s8sbu
 
-### 安装方式<a id="install"></a>
+### Installation<a id="install"></a>
 
 ```bash
 yarn add rekv
 ```
 
-版本要求：React 版本 >= 16.8.0
+Requirements: React version >= 16.8.0
 
-### 快速使用<a id="quick-use"></a>
+### Quickstart<a id="quick-use"></a>
 
-> 适用于小型项目，只需要一个全局状态
+> Suitable for small projects, only one global state is needed
 
 ```tsx
 // Demo.tsx
@@ -56,12 +58,12 @@ import React from 'react';
 import { globalStore } from 'rekv';
 
 export default function Demo() {
-  // 使用状态
+  // Use global state
   const { name } = globalStore.useState('name');
   return <div>Hello, {name}</div>;
 }
 
-// 在另一个文件，或其他地方调用
+// Call in another file, or elsewhere
 globalStore.setState({ name: 'Jack' });
 ```
 
@@ -71,57 +73,58 @@ globalStore.setState({ name: 'Jack' });
 
   - new Rekv(object)
 
-    > 创建一个 `Rekv` 的实例
+    > Create an instance of `Rekv`
 
-  - delegate **全局事件委托**<a id="global-delegate"></a>
+  - `delegate` **Global event delegation**<a id="global-delegate"></a>
 
-    > 全局事件委托，可设置所有 `Rekv` 实例的事件委托
+    > Global event delegation, you can set the event delegation of all `Rekv` instances
 
-    - beforeUpdate 状态更新前的事件，可对设置的状态进行拦截，检查并修改
+    - `beforeUpdate` The event before the state update can intercept, check and modify the set state
 
       ```ts
       import Rekv from 'rekv';
 
-      // 所有 Rekv 的实例，在更新前都将执行此方法
-      // state: 使用 setState() 更新的状态值
-      // store: 需要更新状态的 store
-      // 返回值: 如果需要拦截并修改 setState 的值，可返回一个新的对象，替换 setState 的值
+      // All instances of `Rekv` will execute this method before updating
+      // state: State value updated using setState()
+      // store: Store whose state is about to be updated
+      // Return value: If you need to intercept and modify the value of setState, you can return a new object, replacing the value of setState
       Rekv.delegate.beforeUpdate = ({ state, store }) => {
         console.log(store.currentState, state);
-        // return state;	// 可选，如果返回了新的值，则可实现对状态的拦截修改
+        // return is optional, if a new value is returned, the interception and modification of the state can be achieved
+        // return state;
       };
       ```
 
-    - afterUpdate 状态更新后的事件，返回已更新的状态
+    - `afterUpdate` Event after state update, returns the updated state
 
       ```tsx
       import Rekv from 'rekv';
 
-      // 所有的 Rekv 实例，在完成状态更新后，执行此方法
-      // state: 已更新的状态（这里已过滤掉未发生改变的状态）
-      // store: 已更新状态的 store
+      // All instances of `Rekv` will execute this method before updating
+      // state: The updated state (the unchanged state has been filtered out here)
+      // store: Store with updated state
       Rekv.delegate.afterUpdate = ({ state, store }) => {
         console.log(store.currentState, state);
       };
       ```
 
-- globalStore
+- `globalStore`
 
-  > globalStore 是一个默认创建的 `Rekv` 类的实例，可使用 `Rekv` 实例的所有方法与属性
+  > `globalStore` is an instance of the `Rekv` class created by default, and all methods and properties of the`Rekv` instance can be used
 
-- Rekv 实例属性与方法
+- Rekv Instance properties and methods
 
-  - .delegate 使用方式与 [全局事件委托](#global-delegate) 相同
+  - `.delegate` is used in the same way as [Global event delegation](#global-delegate)
 
-    > 实例的事件委托，如果和全局的事件委托同时设置了，会**优先执行实例的事件委托**，再执行全局的事件委托，使用方式用全局事件委托相同
+    > The event delegation of the instance, if it is set at the same time as the global event delegation, the instance event delegation will be executed first, and then the global event delegation will be executed, using the same way as the global event delegation
 
-  - .currentState 获取当前时刻实例的状态
+  - `.currentState` Get the state of the instance at the current moment
 
-  - .getCurrentState() 与 `.currentState` 功能相同
+  - `.getCurrentState()` has the same function as `.currentState`
 
-  - .useState()
+  - `.useState()`
 
-    > 在函数式组件中订阅并使用状态，通过设置多个参数，可在一行使用多个状态
+    > Subscribe and use state in Function Components. By setting multiple parameters, you can use multiple state on one line
 
     ```tsx
     import React from 'react';
@@ -138,14 +141,14 @@ globalStore.setState({ name: 'Jack' });
     }
     ```
 
-  - .setState() [对状态进行更新]()
+  - `.setState()` Update state
 
     ```tsx
     import store from './store';
-    // 方法1: 直接设置状态
+    // Method 1: Set the state directly
     store.setState({ count: 1 });
-    // 方法2: 使用一个回调函数，获取当前状态，并返回新的状态
-    // state: 当前状态
+    // Method 2: Use a callback function to get the current state and return the new state
+    // state: Current state
     store.setState((state) => {
       return {
         count: state.count + 1,
@@ -153,15 +156,15 @@ globalStore.setState({ name: 'Jack' });
     });
     ```
 
-  - .classUseState() [在类组件中使用状态](#using-in-class-component)
+  - `.classUseState()` [Use state in class components](#use-in-class-component)
 
-### 高级用法<a id="advanced-use"></a>
+### Advanced usage<a id="advanced-use"></a>
 
-> 适用于多个 Store 的情况，可对每个状态进行 TypeScript 静态检查
+> Applicable to multiple stores, TypeScript static check can be performed for each state
 
-#### 函数式组件使用方式<a id="using-in-function-component"></a>
+#### Use in Functional Component<a id="use-in-function-component"></a>
 
-**使用 Rekv 创建一个 store**
+**Use Rekv to create a store**
 
 ```ts
 // store.ts
@@ -173,7 +176,7 @@ export default new Rekv({
 });
 ```
 
-**使用状态**
+**Use state**
 
 ```tsx
 import React from 'react';
@@ -190,13 +193,13 @@ export default function Demo() {
 }
 ```
 
-**在另一个组件内更新状态**
+**Update state in another component**
 
 ```tsx
 import React from 'react';
 import store from './store';
 
-// 重置计数器
+// Reset counter
 function reset() {
   store.setState({ count: 0 });
 }
@@ -220,7 +223,7 @@ export default function Buttons() {
 }
 ```
 
-#### 在类组件中使用<a id="using-in-class-component"></a>
+#### Use in Class Component<a id="use-in-class-component"></a>
 
 ```tsx
 import React, { Component } from 'react';
@@ -235,7 +238,7 @@ export default class MyComponent extends Component {
 }
 ```
 
-#### 使用 TypeScript 类型检查<a id="ts-check"></a>
+#### Use TypeScript type checking<a id="ts-check"></a>
 
 ```tsx
 // store.ts
@@ -260,8 +263,8 @@ import React from 'react';
 import store from './store';
 
 export default function User() {
-  // name 将被推断为 string 类型
-  // age 将被推断为 number | undefined 类型
+  // name will be inferred as type string
+  // age will be inferred as number | undefined type
   const { name, age } = store.useState('name', 'age');
 
   return (
@@ -272,18 +275,18 @@ export default function User() {
 }
 ```
 
-#### 获取当前时刻的状态<a id="get-current-state"></a>
+#### Get the current state<a id="get-current-state"></a>
 
 ```tsx
 import store from './store';
 
-// 获取当前时刻的状态
+// Get the current state
 store.currentState;
-// 或
-store.getCurrentState(); // 兼容旧版本的 API
+// or
+store.getCurrentState(); // Compatible with older APIs
 ```
 
-#### 事件委托、拦截器<a id="delegate"></a>
+#### Event delegate and interceptor<a id="delegate"></a>
 
 ```tsx
 import store from './store';
@@ -291,30 +294,30 @@ import store from './store';
 store.delegate = {
   beforeUpdate: ({ state }) => {
     console.log('beforeUpdate', state);
-    // 可在这里拦截 setState 的值，并进行修改
+    // The value of setState() can be intercepted here and modified
     return state;
   },
   afterUpdate: ({ state }) => {
-    // afterUpdate 的 state 只包含了需要更新的状态
+    // The state of afterUpdate contains only the state that needs to be updated
     console.log('afterUpdate', state);
   },
 };
 ```
 
-### 更新日志<a id="update-log"></a>
+### Update Log<a id="update-log"></a>
 
 #### 1.1.0
 
-- 添加快速使用方式，可直接使用 globalStore
-- 添加事件委托 `beforeUpdate` 和 `afterUpdate`
+- Add quickstart method, can be used directly globalStore
+- Add event delegate `beforeUpdate` and `afterUpdate`
 
 #### 1.0.0
 
-**重要更新 使用方式与低版本不兼容**
+**Important update Usage is not compatible with earlier versions**
 
-- 性能提升、支持异步批量更新状态，使用 `unstable_batchedUpdates` 进行状态异步更新
-- 类组件使用方式简化 `bindClassComponent` 方法 变更为 `classUseState`，删除 `unbindClassComponent` 方法
-- useState 可使用多个状态名 `useState` 和 `classUseState` 支持一行获取多个状态名称
+- Performance improvement, support for asynchronous batch update state, use `unstable_batchedUpdates` for asynchronous state update
+- Simplified use of class components `bindClassComponent` method changed to `classUseState`, removed `unbindClassComponent` method
+- `useState` can use multiple state names `useState` and `classUseState` support one line to get multiple state names
 
 [coverage-image]: https://img.shields.io/coveralls/flarestart/rekv.svg
 [coverage-url]: https://coveralls.io/github/flarestart/rekv
