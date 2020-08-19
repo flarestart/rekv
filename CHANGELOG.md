@@ -1,3 +1,20 @@
+# [1.2.0](https://github.com/flarestart/rekv/compare/v1.1.1...v1.2.0) (2020-08-19)
+
+
+### docs
+
+* 文档更新，默认使用中文文档 ([7f7b813](https://github.com/flarestart/rekv/commit/7f7b81369663cb5885f3ffa8c385ab298998ab7e))
+
+### feat
+
+* 支持定义与使用 Effects ([56bf97c](https://github.com/flarestart/rekv/commit/56bf97c14f4afb0f28924b641467d5a97e6d7b09))
+
+### fix
+
+* 修复 React Native 中使用报错的问题；添加 currentState 只读检查 ([bcf28bb](https://github.com/flarestart/rekv/commit/bcf28bb22aca4995a8bfb5640e6c4d9b4424af56))
+
+
+
 ## [1.1.1](https://github.com/flarestart/rekv/compare/v1.1.0...v1.1.1) (2020-04-17)
 
 
