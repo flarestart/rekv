@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "module": "commonjs",
     "target": "es5",
     "declaration": true,
     "skipLibCheck": true,
@@ -8,7 +9,7 @@
     "esModuleInterop": true,
     "removeComments": true,
     "outDir": "dist",
-    "noEmit": true
+    "noEmit": false
   },
-  "include": ["src/rekv.ts"]
+  "include": ["src/*.ts"]
 }

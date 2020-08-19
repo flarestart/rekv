@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import Rekv from '../src/rekv';
+import Rekv from '../src/';
 
 describe('rekv', () => {
   it('delegate beforeUpdate', () => {

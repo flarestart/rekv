@@ -27,32 +27,36 @@ function noBatchUpdates(fn: () => void) {
   return fn();
 }
 
-function loadFromReactDOM() {
-  try {
-    const r = require('react-dom');
-    if (r && typeof r.unstable_batchedUpdates === 'function') {
-      return r.unstable_batchedUpdates;
-    }
-  } catch (e) {
-    // do nothing
-  }
+function isFunction(fn: any): fn is Function {
+  return typeof fn === 'function';
 }
 
-/* istanbul ignore next */
-function loadFromReactNative() {
-  try {
-    const r = require('react-native');
-    if (r && typeof r.unstable_batchedUpdates === 'function') {
-      return r.unstable_batchedUpdates;
+let batchUpdates: Function = noBatchUpdates;
+import('./batchedUpdates').then(
+  (r) => {
+    /* istanbul ignore next */
+    if (isFunction(r.unstable_batchedUpdates)) {
+      batchUpdates = r.unstable_batchedUpdates;
     }
-  } catch (e) {
-    // do nothing
-  }
-}
-/* istanbul ignore next */
-const batchUpdates = loadFromReactDOM() || loadFromReactNative() || noBatchUpdates;
+  },
+  () => {}
+);
 
 type EventCallback = (v: any) => void;
+
+type DeepReadonly<T> = T extends (infer R)[]
+  ? DeepReadonlyArray<R>
+  : T extends Function
+  ? T
+  : T extends object
+  ? DeepReadonlyObject<T>
+  : T;
+
+interface DeepReadonlyArray<T> extends ReadonlyArray<DeepReadonly<T>> {}
+
+type DeepReadonlyObject<T> = {
+  readonly [P in keyof T]: DeepReadonly<T[P]>;
+};
 
 interface InitState {
   [key: string]: any;
@@ -77,6 +81,7 @@ interface RekvDelegate<T, K> {
 export class Rekv<T extends InitState> {
   public static delegate: RekvDelegate<Rekv<any>, any> = {};
   public delegate: RekvDelegate<this, Partial<T>> = {};
+
   private _events: any = {};
   private _updateId = 0;
   private _state: any = {};
@@ -110,20 +115,20 @@ export class Rekv<T extends InitState> {
 
   setState(param: Partial<T> | ((s: T) => Partial<T>)): void {
     let kvs: Partial<T>;
-    if (typeof param === 'function') {
+    if (isFunction(param)) {
       kvs = param(this._state);
     } else {
       kvs = param;
     }
     if (!this._inDelegate) {
       this._inDelegate = true;
-      if (this.delegate && typeof this.delegate.beforeUpdate === 'function') {
+      if (this.delegate && isFunction(this.delegate.beforeUpdate)) {
         const ret = this.delegate.beforeUpdate({ store: this, state: kvs });
         if (ret) {
           kvs = ret;
         }
       }
-      if (Rekv.delegate && typeof Rekv.delegate.beforeUpdate === 'function') {
+      if (Rekv.delegate && isFunction(Rekv.delegate.beforeUpdate)) {
         const ret = Rekv.delegate.beforeUpdate({ store: this, state: kvs });
         if (ret) {
           kvs = ret;
@@ -135,7 +140,7 @@ export class Rekv<T extends InitState> {
       throw new Error('setState() only receive an plain object');
     }
     const keys = Object.keys(kvs);
-    const needUpdateKeys: string[] = [];
+    const needUpdateKeys: any[] = [];
     const updatedValues: any = {};
     keys.forEach((key) => {
       if (this._state[key] !== kvs[key]) {
@@ -144,31 +149,15 @@ export class Rekv<T extends InitState> {
         this._state[key] = kvs[key];
       }
     });
-    batchUpdates(() => {
-      needUpdateKeys.forEach((key: any) => {
-        const callbacks: any[] = this._events[key];
-        if (callbacks) {
-          callbacks.forEach((callback) => {
-            // check if callback has been updated
-            if (callback._updateId !== this._updateId) {
-              callback._updateId = this._updateId;
-              callback(this._state[key]);
-            }
-          });
-        }
-      });
-    });
-    this._updateId++;
-    /* istanbul ignore next */
-    if (this._updateId >= Number.MAX_SAFE_INTEGER) {
-      this._updateId = 0;
-    }
+
+    this.forceUpdate(...needUpdateKeys);
+
     if (!this._inDelegate) {
       this._inDelegate = true;
-      if (this.delegate && typeof this.delegate.afterUpdate === 'function') {
+      if (this.delegate && isFunction(this.delegate.afterUpdate)) {
         this.delegate.afterUpdate({ store: this, state: updatedValues });
       }
-      if (Rekv.delegate && typeof Rekv.delegate.afterUpdate === 'function') {
+      if (Rekv.delegate && isFunction(Rekv.delegate.afterUpdate)) {
         Rekv.delegate.afterUpdate({ store: this, state: updatedValues });
       }
       this._inDelegate = false;
@@ -218,19 +207,50 @@ export class Rekv<T extends InitState> {
       keys.forEach((key) => {
         this.off(key, updater);
       });
-      if (typeof unmount === 'function') {
+      if (isFunction(unmount)) {
         unmount.call(component);
       }
     };
     return ret;
   }
 
-  get currentState(): Readonly<T> {
+  get currentState(): DeepReadonly<T> {
     return this._state;
   }
 
-  getCurrentState(): Readonly<T> {
+  getCurrentState(): DeepReadonly<T> {
     return this._state;
+  }
+
+  forceUpdate<K extends keyof T>(...keys: K[]) {
+    if (keys.length <= 0) {
+      return;
+    }
+    let updated = false;
+    batchUpdates(() => {
+      keys.forEach((key: any) => {
+        const callbacks: any[] = this._events[key];
+        if (callbacks) {
+          callbacks.forEach((callback) => {
+            // check if callback has been updated
+            if (callback.updateId !== this._updateId) {
+              /* eslint-disable-next-line */
+              callback.updateId = this._updateId;
+              callback(this._state[key]);
+            }
+          });
+          updated = true;
+        }
+      });
+    });
+    if (updated) {
+      /* eslint-disable-next-line */
+      this._updateId++;
+      /* istanbul ignore next */
+      if (this._updateId >= Number.MAX_SAFE_INTEGER) {
+        this._updateId = 0;
+      }
+    }
   }
 }
 

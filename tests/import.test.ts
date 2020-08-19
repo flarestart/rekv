@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import Rekv, { Rekv as R, globalStore } from '../src/rekv';
+import Rekv, { Rekv as R, globalStore } from '../src/';
 
 describe('rekv', () => {
   it('expect import default as same as Rekv', () => {

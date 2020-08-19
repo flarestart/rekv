@@ -1,8 +1,8 @@
 # Rekv
 
-[中文文档](./README_CN.md)
-
 Rekv is a global state manager design for React Hooks and has good compatibility with Class Component.
+
+[中文文档](./README_CN.md)
 
 [![Travis CI][ci-image]][ci-url]
 [![Coveralls][coverage-image]][coverage-url]

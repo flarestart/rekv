@@ -2,7 +2,7 @@ import React from 'react';
 import { mount } from 'enzyme';
 import { expect } from 'chai';
 import { act } from 'react-dom/test-utils';
-import { Rekv } from '../src/rekv';
+import { Rekv } from '../src/';
 
 /**
  * sleep

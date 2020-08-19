@@ -1,7 +1,7 @@
 {
   "name": "rekv",
   "version": "1.1.1",
-  "main": "dist/rekv.js",
+  "main": "dist/index.js",
   "author": "flarestart",
   "repository": {
     "type": "git",
@@ -20,7 +20,7 @@
     }
   },
   "scripts": {
-    "build": "tsc --noEmit false",
+    "build": "rm -rf ./dist && tsc",
     "test": "jest",
     "coverage": "jest --coverage",
     "coveralls": "jest --coverage && cat ./coverage/lcov.info | coveralls"
