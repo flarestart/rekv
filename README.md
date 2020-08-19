@@ -11,7 +11,7 @@ Rekv is a global state manager design for React Hooks and has good compatibility
 
 ### Feature<a id="feature"></a>
 
-- A simple but easy-to-use state manager, a file, only about 200 lines
+- A simple but easy-to-use state manager
 - High performance, use Key-Value instead of tree structure to handle state
 - Support TypeScript static check
 - Support state change event delegation (interceptor)
@@ -33,6 +33,7 @@ Rekv is a global state manager design for React Hooks and has good compatibility
   - [Use TypeScript type checking](#ts-check)
   - [Get the current state](#get-current-state)
   - [Event delegate and interceptor](#delegate)
+  - [Use Effects](#effects)
 - [Update Log](#update-log)
 
 ### Demo<a id="demo"></a>
@@ -249,10 +250,12 @@ interface InitState {
   age?: number;
 }
 
-const store = new Rekv<InitState>({
+const initState: InitState = {
   name: 'Jack',
   age: 25,
-});
+};
+
+const store = new Rekv(initState);
 
 export default store;
 ```
@@ -302,6 +305,27 @@ store.delegate = {
     console.log('afterUpdate', state);
   },
 };
+```
+
+#### Use Effects<a id="effects"></a>
+
+```tsx
+import Rekv froom 'rekv';
+
+// define effects
+const store = new Rekv(
+  { foo: 'bar' },
+  {
+    effects: {
+      changeFoo(name: string) {
+        this.setState({ foo: name });
+      },
+    },
+  }
+);
+
+// use effect
+store.effects.changeFoo('hello')
 ```
 
 ### Update Log<a id="update-log"></a>

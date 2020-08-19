@@ -52,7 +52,7 @@ type DeepReadonly<T> = T extends (infer R)[]
   ? DeepReadonlyObject<T>
   : T;
 
-interface DeepReadonlyArray<T> extends ReadonlyArray<DeepReadonly<T>> {}
+type DeepReadonlyArray<T> = ReadonlyArray<DeepReadonly<T>>;
 
 type DeepReadonlyObject<T> = {
   readonly [P in keyof T]: DeepReadonly<T[P]>;
@@ -78,20 +78,38 @@ interface RekvDelegate<T, K> {
   afterUpdate?: (e: { store: T; state: Readonly<K> }) => void;
 }
 
-export class Rekv<T extends InitState> {
-  public static delegate: RekvDelegate<Rekv<any>, any> = {};
+type MapEffects<T> = {
+  [P in keyof T]: T[P] extends (...args: infer U) => infer R ? (...args: U) => R : T;
+};
+
+export class Rekv<
+  T extends InitState,
+  E = {
+    [key: string]: (this: Pick<Rekv<T>, 'currentState' | 'setState' | 'on' | 'off'>, ...args: any[]) => void;
+  }
+> {
+  public static delegate: RekvDelegate<Rekv<any, any>, any> = {};
   public delegate: RekvDelegate<this, Partial<T>> = {};
+  public effects: MapEffects<E>;
 
   private _events: any = {};
   private _updateId = 0;
   private _state: any = {};
   private _inDelegate = false;
 
-  constructor(initState: T) {
+  constructor(initState: T, options?: { effects: E }) {
     if (!isPlainObject(initState)) {
       throw new Error('init state is not a plain object');
     }
     this._state = initState;
+    const effects: any = {};
+    if (options && options.effects) {
+      Object.keys(options.effects).forEach((key) => {
+        const func = options.effects[key];
+        effects[key] = (...args: any[]) => func.call(this, ...args);
+      });
+    }
+    this.effects = effects;
   }
 
   on<K extends keyof T>(name: K, callback: EventCallback): void {
@@ -234,7 +252,6 @@ export class Rekv<T extends InitState> {
           callbacks.forEach((callback) => {
             // check if callback has been updated
             if (callback.updateId !== this._updateId) {
-              /* eslint-disable-next-line */
               callback.updateId = this._updateId;
               callback(this._state[key]);
             }
@@ -244,7 +261,6 @@ export class Rekv<T extends InitState> {
       });
     });
     if (updated) {
-      /* eslint-disable-next-line */
       this._updateId++;
       /* istanbul ignore next */
       if (this._updateId >= Number.MAX_SAFE_INTEGER) {
@@ -255,4 +271,4 @@ export class Rekv<T extends InitState> {
 }
 
 export default Rekv;
-export const globalStore = new Rekv<any>({});
+export const globalStore = new Rekv<any, {}>({});

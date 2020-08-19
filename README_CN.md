@@ -9,7 +9,7 @@ Rekv 是一个为 React 函数式组件设计的全局状态管理器，且对�
 
 ### 特色<a id="feature"></a>
 
-- 一个简单但易用的状态管理器，一个文件，仅 200 余行
+- 一个简单但易用的状态管理器
 - 高性能，使用 Key-Value 而不是树型结构来处理状态
 - 支持 TypeScript 静态检查
 - 支持状态变更事件委托（拦截器）
@@ -31,6 +31,7 @@ Rekv 是一个为 React 函数式组件设计的全局状态管理器，且对�
   - [使用 TypeScript 类型检查](#ts-check)
   - [获取当前时刻的状态](#get-current-state)
   - [事件委托-拦截器](#delegate)
+  - [使用副作用](#effects)
 - [更新日志](#update-log)
 
 ### Demo<a id="demo"></a>
@@ -246,10 +247,12 @@ interface InitState {
   age?: number;
 }
 
-const store = new Rekv<InitState>({
+const initState: InitState = {
   name: 'Jack',
   age: 25,
-});
+};
+
+const store = new Rekv(initState);
 
 export default store;
 ```
@@ -299,6 +302,27 @@ store.delegate = {
     console.log('afterUpdate', state);
   },
 };
+```
+
+#### 使用副作用<a id="effects"></a>
+
+```tsx
+import Rekv froom 'rekv';
+
+// 定义副使用
+const store = new Rekv(
+  { foo: 'bar' },
+  {
+    effects: {
+      changeFoo(name: string) {
+        this.setState({ foo: name });
+      },
+    },
+  }
+);
+
+// 使用副作用
+store.effects.changeFoo('hello')
 ```
 
 ### 更新日志<a id="update-log"></a>
