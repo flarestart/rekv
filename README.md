@@ -1,6 +1,6 @@
 # Rekv
 
-Rekv 是一个为 React 函数式组件设计的全局状态管理器，且对类组件具有很好的兼容
+Rekv 是一个为 React 函数式组件设计的全局状态管理器，且对类组件具有很好的兼容，所有方法与状态均有 TypeScript 提示
 
 [English Document](./README_EN.md)
 

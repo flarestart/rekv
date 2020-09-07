@@ -1,6 +1,6 @@
 # Rekv
 
-Rekv is a global state manager design for React Hooks and has good compatibility with Class Component.
+Rekv is a global state manager design for React Hooks and has good compatibility with Class Component.  All methods and states have TypeScript prompts
 
 [中文文档](./README.md)
 
