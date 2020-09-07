@@ -1,3 +1,9 @@
+## <small>1.2.1 (2020-09-07)</small>
+
+* fix: 解决 Number.MAX_SAFE_INTEGER 不兼容 MSIE 的问题 ([19df44f](https://github.com/flarestart/rekv/commit/19df44f))
+
+
+
 # [1.2.0](https://github.com/flarestart/rekv/compare/v1.1.1...v1.2.0) (2020-08-19)
 
 
