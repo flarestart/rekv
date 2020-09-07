@@ -168,7 +168,7 @@ export class Rekv<
       }
     });
 
-    this.forceUpdate(...needUpdateKeys);
+    this.updateComponents(...needUpdateKeys);
 
     if (!this._inDelegate) {
       this._inDelegate = true;
@@ -240,32 +240,29 @@ export class Rekv<
     return this._state;
   }
 
-  forceUpdate<K extends keyof T>(...keys: K[]) {
+  updateComponents<K extends keyof T>(...keys: K[]) {
     if (keys.length <= 0) {
       return;
     }
-    let updated = false;
     batchUpdates(() => {
       keys.forEach((key: any) => {
-        const callbacks: any[] = this._events[key];
-        if (callbacks) {
-          callbacks.forEach((callback) => {
+        const updaters: any[] = this._events[key];
+        if (Array.isArray(updaters)) {
+          updaters.forEach((updater) => {
             // check if callback has been updated
-            if (callback.updateId !== this._updateId) {
-              callback.updateId = this._updateId;
-              callback(this._state[key]);
+            if (updater.updateId !== this._updateId) {
+              updater.updateId = this._updateId;
+              updater(this._state[key]);
             }
           });
-          updated = true;
         }
       });
     });
-    if (updated) {
-      this._updateId++;
-      /* istanbul ignore next */
-      if (this._updateId >= Number.MAX_SAFE_INTEGER) {
-        this._updateId = 0;
-      }
+    this._updateId++;
+    /* istanbul ignore next */
+    if (this._updateId >= 2147483647) {
+      // reset updateId
+      this._updateId = 0;
     }
   }
 }
