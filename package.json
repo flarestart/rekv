@@ -28,7 +28,7 @@
   "files": [
     "dist",
     "LICENSE",
-    "README.MD"
+    "README.md"
   ],
   "devDependencies": {
     "@types/chai": "^4.2.3",

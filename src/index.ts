@@ -21,66 +21,33 @@
 // SOFTWARE.
 
 import { useState, Component, useEffect } from 'react';
+import {
+  isFunction,
+  isPlainObject,
+  InitState,
+  RekvDelegate,
+  DeepReadonly,
+  MapEffects,
+  SubscribeCallback,
+} from './utils';
 
-/* istanbul ignore next */
-function noBatchUpdates(fn: () => void) {
-  return fn();
-}
-
-function isFunction(fn: any): fn is Function {
-  return typeof fn === 'function';
-}
-
-let batchUpdates: Function = noBatchUpdates;
-import('./batchedUpdates').then(
-  (r) => {
-    /* istanbul ignore next */
+// Use batch updates to improve performance
+// unstable_batchedUpdates is provided by react-dom or react-native
+// In react-native `batchedUpdates.native.js` have a higher priority than
+// `batchedUpdates.js`, so react-native will work correct
+//
+// istanbul ignore next
+let batchUpdates = (fn: () => void) => fn();
+import('./batchedUpdates')
+  .then((r) => {
+    // istanbul ignore next
     if (isFunction(r.unstable_batchedUpdates)) {
       batchUpdates = r.unstable_batchedUpdates;
     }
-  },
-  () => {}
-);
-
-type EventCallback = (v: any) => void;
-
-type DeepReadonly<T> = T extends (infer R)[]
-  ? DeepReadonlyArray<R>
-  : T extends Function
-  ? T
-  : T extends object
-  ? DeepReadonlyObject<T>
-  : T;
-
-type DeepReadonlyArray<T> = ReadonlyArray<DeepReadonly<T>>;
-
-type DeepReadonlyObject<T> = {
-  readonly [P in keyof T]: DeepReadonly<T[P]>;
-};
-
-interface InitState {
-  [key: string]: any;
-}
-
-function isPlainObject(obj: any): boolean {
-  if (typeof obj !== 'object' || obj === null) return false;
-
-  let proto = obj;
-  while (Object.getPrototypeOf(proto) !== null) {
-    proto = Object.getPrototypeOf(proto);
-  }
-  // proto = null
-  return Object.getPrototypeOf(obj) === proto;
-}
-
-interface RekvDelegate<T, K> {
-  beforeUpdate?: (e: { store: T; state: Readonly<K> }) => K | void;
-  afterUpdate?: (e: { store: T; state: Readonly<K> }) => void;
-}
-
-type MapEffects<T> = {
-  [P in keyof T]: T[P] extends (...args: infer U) => infer R ? (...args: U) => R : T;
-};
+  })
+  .catch(() => {
+    // ignore import error
+  });
 
 export class Rekv<
   T extends InitState,
@@ -112,7 +79,12 @@ export class Rekv<
     this.effects = effects;
   }
 
-  on<K extends keyof T>(name: K, callback: EventCallback): void {
+  /**
+   * Add changed listener to a key
+   * @param name key name
+   * @param callback key changed listener
+   */
+  on<K extends keyof T>(name: K, callback: SubscribeCallback<T[K]>): void {
     const s = this._events[name];
     if (!s) {
       this._events[name] = [callback];
@@ -121,7 +93,12 @@ export class Rekv<
     }
   }
 
-  off<K extends keyof T>(name: K, callback: EventCallback): void {
+  /**
+   * Remove changed listener to a key
+   * @param name key name
+   * @param callback key changed listener
+   */
+  off<K extends keyof T>(name: K, callback: SubscribeCallback<T[K]>): void {
     const s = this._events[name];
     if (s) {
       const index = s.indexOf(callback);
@@ -131,6 +108,10 @@ export class Rekv<
     }
   }
 
+  /**
+   * setState is the only way to change states in Rekv
+   * @param param new state, an object or a function returns an object
+   */
   setState(param: Partial<T> | ((s: T) => Partial<T>)): void {
     let kvs: Partial<T>;
     if (isFunction(param)) {
@@ -182,6 +163,12 @@ export class Rekv<
     }
   }
 
+  /**
+   * Rekv support for React Hooks
+   * @param keys the keys to be watched, if the watched keys has been changed,
+   * the component will be updated and the changed values will return
+   * @returns changed keys and values
+   */
   useState = <K extends keyof T>(...keys: K[]): Readonly<Pick<T, K>> => {
     const [value, setValue] = useState(() => {
       const v: any = {};
@@ -209,6 +196,13 @@ export class Rekv<
     return value;
   };
 
+  /**
+   * Rekv support for React class Component
+   * @param component instance of current class Component
+   * @param keys the keys to be watched, if the watched keys has been changed,
+   * the component will be updated and the changed values will return
+   * @returns changed keys and values
+   */
   classUseState<K extends keyof T>(component: Component, ...keys: K[]): Readonly<Pick<T, K>> {
     const ret: any = {};
     const unmount = component.componentWillUnmount;
@@ -249,7 +243,7 @@ export class Rekv<
         const updaters: any[] = this._events[key];
         if (Array.isArray(updaters)) {
           updaters.forEach((updater) => {
-            // check if callback has been updated
+            // check whether the updater has been updated, the same updater may watch different keys
             if (updater.updateId !== this._updateId) {
               updater.updateId = this._updateId;
               updater(this._state[key]);
@@ -259,13 +253,13 @@ export class Rekv<
       });
     });
     this._updateId++;
-    /* istanbul ignore next */
+    // istanbul ignore next
     if (this._updateId >= 2147483647) {
-      // reset updateId
+      // _updateId will be reset to zero to avoid overflow (2147483647 is 2**31-1)
       this._updateId = 0;
     }
   }
 }
 
+export const globalStore = new Rekv<any, void>({});
 export default Rekv;
-export const globalStore = new Rekv<any, {}>({});
