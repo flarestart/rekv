@@ -4,19 +4,26 @@ Rekv is a global state manager design for React Hooks and has good compatibility
 
 [中文文档](./README.md)
 
-[![Travis CI][ci-image]][ci-url]
-[![Coveralls][coverage-image]][coverage-url]
+[![Test coverage][codecov-image]][codecov-url]
 [![NPM version][npm-image]][npm-url]
 [![Downloads][downloads-image]][downloads-url]
 
+[codecov-image]: https://img.shields.io/codecov/c/github/flarestart/rekv.svg?style=flat-square
+[codecov-url]: https://codecov.io/github/flarestart/rekv?branch=master
+[npm-image]: https://img.shields.io/npm/v/rekv.svg
+[npm-url]: https://npmjs.org/package/rekv
+[downloads-image]: http://img.shields.io/npm/dm/rekv.svg
+[downloads-url]: https://npmjs.org/package/rekv
+
 ### Feature<a id="feature"></a>
 
-- A simple but easy-to-use state manager
+- A simple but easy-to-use global state manager
+- No Redux, no dependencies, only 1.5 KB after gzipped
+- Does not use high-end components (HOC)
+- Support Hooks and class components
 - High performance, use Key-Value instead of tree structure to handle state
-- Support TypeScript static check
+- Both methods and states support TypeScript static checking
 - Support state change event delegation (interceptor)
-- No Redux, no dependencies, only state
-- Does not use higher-order components (HOC)
 
 ### Table of Contents
 
@@ -48,24 +55,186 @@ yarn add rekv
 
 Requirements: React version >= 16.8.0
 
-### Quickstart<a id="quick-use"></a>
 
-> Suitable for small projects, only one global state is needed
+### Usage<a id="advanced-use"></a>
+
+> Multiple stores can be created, and TypeScript static check for each state
+
+#### Use in Functional Component<a id="use-in-function-component"></a>
+
+**Use Rekv to create a store**
+
+```ts
+// store.ts
+import Rekv from 'rekv';
+
+export default new Rekv({
+  name: 'test',
+  count: 0,
+});
+```
+
+**Use state**
 
 ```tsx
-// Demo.tsx
 import React from 'react';
-import { globalStore } from 'rekv';
+import store from './store';
 
 export default function Demo() {
-  // Use global state
-  const { name } = globalStore.useState('name');
-  return <div>Hello, {name}</div>;
+  const s = store.useState('name', 'count');
+
+  return (
+    <div>
+      {s.name}, {s.count}
+    </div>
+  );
+}
+```
+
+**Update state in another component**
+
+```tsx
+import React from 'react';
+import store from './store';
+
+// Reset counter
+function reset() {
+  store.setState({ count: 0 });
 }
 
-// Call in another file, or elsewhere
-globalStore.setState({ name: 'Jack' });
+function increment() {
+  store.setState((state) => ({ count: state.count + 1 }));
+}
+
+function decrement() {
+  store.setState((state) => ({ count: state.count - 1 }));
+}
+
+export default function Buttons() {
+  return (
+    <div>
+      <button onClick={reset}>reset</button>
+      <button onClick={increment}>+1</button>
+      <button onClick={decrement}>-1</button>
+    </div>
+  );
+}
 ```
+
+#### Use in Class Component<a id="use-in-class-component"></a>
+
+```tsx
+import React, { Component } from 'react';
+import store from './store';
+
+export default class MyComponent extends Component {
+  s = store.classUseState(this, 'count');
+
+  render() {
+    return <div>{this.s.count}</div>;
+  }
+}
+```
+
+#### Use TypeScript type checking<a id="ts-check"></a>
+
+```tsx
+// store.ts
+import Rekv from 'rekv';
+
+interface InitState {
+  name: string;
+  age?: number;
+}
+
+const initState: InitState = {
+  name: 'Jack',
+  age: 25,
+};
+
+const store = new Rekv(initState);
+
+export default store;
+```
+
+```tsx
+// User.ts
+import React from 'react';
+import store from './store';
+
+export default function User() {
+  // name will be inferred as type string
+  // age will be inferred as number | undefined type
+  const s = store.useState('name', 'age');
+
+  return (
+    <div>
+      {s.name}, {s.age}
+    </div>
+  );
+}
+```
+
+#### Get the current state<a id="get-current-state"></a>
+
+```tsx
+import store from './store';
+
+// Get the current state
+store.currentState;
+// or
+store.getCurrentState(); // Compatible with older APIs
+```
+
+#### Event delegate and interceptor<a id="delegate"></a>
+
+```tsx
+import store from './store';
+
+store.delegate = {
+  beforeUpdate: ({ state }) => {
+    console.log('beforeUpdate', state);
+    // The value of setState() can be intercepted here and modified
+    return state;
+  },
+  afterUpdate: ({ state }) => {
+    // The state of afterUpdate contains only the state that needs to be updated
+    console.log('afterUpdate', state);
+  },
+};
+```
+
+#### Use Effects<a id="effects"></a>
+
+```tsx
+import Rekv from 'rekv';
+
+const store = new Rekv(
+  { foo: 'bar', ret: null },
+  {
+    effects: {
+      // define effect
+      changeFoo(name: string) {
+        this.setState({ foo: name });
+      },
+      // define async effect
+      async loadResource() {
+        const ret = await fetchUrl('...');
+        this.setState({
+          ret,
+        });
+      },
+    },
+  }
+);
+
+// use effect
+store.effects.changeFoo('hello');
+
+// use async effect
+await store.effects.loadResource();
+```
+
 
 ### API
 
@@ -158,184 +327,6 @@ globalStore.setState({ name: 'Jack' });
 
   - `.classUseState()` [Use state in class components](#use-in-class-component)
 
-### Advanced usage<a id="advanced-use"></a>
-
-> Applicable to multiple stores, TypeScript static check can be performed for each state
-
-#### Use in Functional Component<a id="use-in-function-component"></a>
-
-**Use Rekv to create a store**
-
-```ts
-// store.ts
-import Rekv from 'rekv';
-
-export default new Rekv({
-  name: 'test',
-  count: 0,
-});
-```
-
-**Use state**
-
-```tsx
-import React from 'react';
-import store from './store';
-
-export default function Demo() {
-  const { name, count } = store.useState('name', 'count');
-
-  return (
-    <div>
-      {name}, {count}
-    </div>
-  );
-}
-```
-
-**Update state in another component**
-
-```tsx
-import React from 'react';
-import store from './store';
-
-// Reset counter
-function reset() {
-  store.setState({ count: 0 });
-}
-
-function increment() {
-  store.setState((state) => ({ count: state.count + 1 }));
-}
-
-function decrement() {
-  store.setState((state) => ({ count: state.count - 1 }));
-}
-
-export default function Buttons() {
-  return (
-    <div>
-      <button onClick={reset}>reset</button>
-      <button onClick={increment}>+1</button>
-      <button onClick={decrement}>-1</button>
-    </div>
-  );
-}
-```
-
-#### Use in Class Component<a id="use-in-class-component"></a>
-
-```tsx
-import React, { Component } from 'react';
-import store from './store';
-
-export default class MyComponent extends Component {
-  s = store.classUseState(this, 'count');
-
-  render() {
-    return <div>{this.s.count}</div>;
-  }
-}
-```
-
-#### Use TypeScript type checking<a id="ts-check"></a>
-
-```tsx
-// store.ts
-import Rekv from 'rekv';
-
-interface InitState {
-  name: string;
-  age?: number;
-}
-
-const initState: InitState = {
-  name: 'Jack',
-  age: 25,
-};
-
-const store = new Rekv(initState);
-
-export default store;
-```
-
-```tsx
-// User.ts
-import React from 'react';
-import store from './store';
-
-export default function User() {
-  // name will be inferred as type string
-  // age will be inferred as number | undefined type
-  const { name, age } = store.useState('name', 'age');
-
-  return (
-    <div>
-      {name}, {age}
-    </div>
-  );
-}
-```
-
-#### Get the current state<a id="get-current-state"></a>
-
-```tsx
-import store from './store';
-
-// Get the current state
-store.currentState;
-// or
-store.getCurrentState(); // Compatible with older APIs
-```
-
-#### Event delegate and interceptor<a id="delegate"></a>
-
-```tsx
-import store from './store';
-
-store.delegate = {
-  beforeUpdate: ({ state }) => {
-    console.log('beforeUpdate', state);
-    // The value of setState() can be intercepted here and modified
-    return state;
-  },
-  afterUpdate: ({ state }) => {
-    // The state of afterUpdate contains only the state that needs to be updated
-    console.log('afterUpdate', state);
-  },
-};
-```
-
-#### Use Effects<a id="effects"></a>
-
-```tsx
-import Rekv froom 'rekv';
-
-// define effects
-const store = new Rekv(
-  { foo: 'bar' },
-  {
-    effects: {
-      changeFoo(name: string) {
-        this.setState({ foo: name });
-      },
-    },
-  }
-);
-
-// use effect
-store.effects.changeFoo('hello')
-```
-
 ### License
 
 [MIT licensed](./LICENSE)
-
-[coverage-image]: https://img.shields.io/coveralls/flarestart/rekv.svg
-[coverage-url]: https://coveralls.io/github/flarestart/rekv
-[ci-image]: https://img.shields.io/travis/flarestart/rekv.svg?branch=master
-[ci-url]: https://travis-ci.org/flarestart/rekv
-[npm-image]: https://img.shields.io/npm/v/rekv.svg
-[npm-url]: https://npmjs.org/package/rekv
-[downloads-image]: http://img.shields.io/npm/dm/rekv.svg
-[downloads-url]: https://npmjs.org/package/rekv

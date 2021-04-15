@@ -52,7 +52,10 @@ import('./batchedUpdates')
 export class Rekv<
   T extends InitState,
   E = {
-    [key: string]: (this: Pick<Rekv<T>, 'currentState' | 'setState' | 'on' | 'off'>, ...args: any[]) => void;
+    [key: string]: (
+      this: Pick<Rekv<T, any>, 'currentState' | 'setState' | 'on' | 'off'>,
+      ...args: any[]
+    ) => void;
   }
 > {
   public static delegate: RekvDelegate<Rekv<any, any>, any> = {};
@@ -71,10 +74,12 @@ export class Rekv<
     this._state = initState;
     const effects: any = {};
     if (options && options.effects) {
-      Object.keys(options.effects).forEach((key) => {
-        const func = options.effects[key];
+      const effectKeys = Object.keys(options.effects);
+      for (let i = 0, len = effectKeys.length; i < len; i++) {
+        const key = effectKeys[i];
+        const func = (options.effects as any)[key];
         effects[key] = (...args: any[]) => func.call(this, ...args);
-      });
+      }
     }
     this.effects = effects;
   }
@@ -141,15 +146,19 @@ export class Rekv<
     const keys = Object.keys(kvs);
     const needUpdateKeys: any[] = [];
     const updatedValues: any = {};
-    keys.forEach((key) => {
+    for (let i = 0, len = keys.length; i < len; i++) {
+      const key = keys[i];
       if (this._state[key] !== kvs[key]) {
         needUpdateKeys.push(key);
         updatedValues[key] = kvs[key];
         this._state[key] = kvs[key];
       }
-    });
+    }
 
-    this.updateComponents(...needUpdateKeys);
+    if (needUpdateKeys.length > 0) {
+      this._state = { ...this._state };
+      this.updateComponents(...needUpdateKeys);
+    }
 
     if (!this._inDelegate) {
       this._inDelegate = true;
@@ -166,31 +175,24 @@ export class Rekv<
   /**
    * Rekv support for React Hooks
    * @param keys the keys to be watched, if the watched keys has been changed,
-   * the component will be updated and the changed values will return
-   * @returns changed keys and values
+   * the component will be updated and all state will return
+   * @returns all state after change
    */
-  useState = <K extends keyof T>(...keys: K[]): Readonly<Pick<T, K>> => {
-    const [value, setValue] = useState(() => {
-      const v: any = {};
-      keys.forEach((key) => {
-        v[key] = this._state[key];
-      });
-      return v;
-    });
+  useState = <K extends keyof T>(...keys: K[]): DeepReadonly<T> => {
+    const [value, setValue] = useState(() => this._state);
 
     useEffect(() => {
       const updater = () => {
-        const v: any = {};
-        keys.forEach((key) => {
-          v[key] = this._state[key];
-        });
-        setValue(v);
+        // trigger react rerender
+        setValue(this._state);
       };
-      keys.forEach((key) => {
-        this.on(key, updater);
-      });
+      for (let i = 0, len = keys.length; i < len; i++) {
+        this.on(keys[i], updater);
+      }
       return () => {
-        keys.forEach((key) => this.off(key, updater));
+        for (let i = 0, len = keys.length; i < len; i++) {
+          this.off(keys[i], updater);
+        }
       };
     }, keys);
     return value;
@@ -200,30 +202,29 @@ export class Rekv<
    * Rekv support for React class Component
    * @param component instance of current class Component
    * @param keys the keys to be watched, if the watched keys has been changed,
-   * the component will be updated and the changed values will return
-   * @returns changed keys and values
+   * the component will be updated and all state will return
+   * @returns all state after change
    */
-  classUseState<K extends keyof T>(component: Component, ...keys: K[]): Readonly<Pick<T, K>> {
-    const ret: any = {};
+  classUseState<K extends keyof T>(
+    component: Component,
+    ...keys: K[]
+  ): DeepReadonly<T> {
     const unmount = component.componentWillUnmount;
     const updater = () => {
       component.forceUpdate();
     };
-    keys.forEach((key) => {
-      this.on(key, updater);
-      Object.defineProperty(ret, key, {
-        get: () => this._state[key],
-      });
-    });
+    for (let i = 0, len = keys.length; i < len; i++) {
+      this.on(keys[i], updater);
+    }
     component.componentWillUnmount = () => {
-      keys.forEach((key) => {
-        this.off(key, updater);
-      });
+      for (let i = 0, len = keys.length; i < len; i++) {
+        this.off(keys[i], updater);
+      }
       if (isFunction(unmount)) {
         unmount.call(component);
       }
     };
-    return ret;
+    return this._state;
   }
 
   get currentState(): DeepReadonly<T> {
@@ -235,22 +236,21 @@ export class Rekv<
   }
 
   updateComponents<K extends keyof T>(...keys: K[]) {
-    if (keys.length <= 0) {
-      return;
-    }
     batchUpdates(() => {
-      keys.forEach((key: any) => {
+      for (let i = 0, keysLen = keys.length; i < keysLen; i++) {
+        const key = keys[i];
         const updaters: any[] = this._events[key];
         if (Array.isArray(updaters)) {
-          updaters.forEach((updater) => {
+          for (let j = 0, updaterLen = updaters.length; j < updaterLen; j++) {
+            const updater = updaters[j];
             // check whether the updater has been updated, the same updater may watch different keys
             if (updater.updateId !== this._updateId) {
               updater.updateId = this._updateId;
               updater(this._state[key]);
             }
-          });
+          }
         }
-      });
+      }
     });
     this._updateId++;
     // istanbul ignore next
@@ -261,5 +261,5 @@ export class Rekv<
   }
 }
 
-export const globalStore = new Rekv<any, void>({});
+export const globalStore = new Rekv<any, never>({});
 export default Rekv;

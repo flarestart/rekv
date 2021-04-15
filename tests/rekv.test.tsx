@@ -22,12 +22,12 @@ describe('rekv', () => {
   });
   it('new Rekv(undefined) will throw error', () => {
     expect(() => {
-      new Rekv(undefined);
+      new Rekv(undefined as any);
     }).to.throw();
   });
   it('new Rekv(null) will throw error', () => {
     expect(() => {
-      new Rekv(null);
+      new Rekv(null as any);
     }).to.throw();
   });
   it('.setState()', () => {
@@ -66,7 +66,7 @@ describe('rekv', () => {
       },
     });
     expect(() => {
-      rekv.setState(null);
+      rekv.setState(null as any);
     }).to.throw();
   });
   it('.setState(() => {})', () => {
@@ -315,5 +315,43 @@ describe('rekv', () => {
       await sleep(100);
     }
     expect(count).to.equal(2);
+  });
+  it('useState will return all state', async() => {
+    await act(async () => {
+      const rekv = new Rekv({
+        state1: 'state1',
+        state2: 'state2',
+      });
+      function Test() {
+        const { state1, state2 } = rekv.useState('state1');
+        return <div>{state1},{state2}</div>;
+      }
+      const wrapper = mount(<Test />);
+      await sleep(100);
+      expect(wrapper.find('div').text()).to.equal('state1,state2');
+    });
+  });
+  it('classUseState will return all state', async() => {
+    await act(async () => {
+      const rekv = new Rekv({
+        state1: 'state1',
+        state2: 'state2',
+      });
+
+      class Test extends React.Component {
+        s = rekv.classUseState(this, 'state1');
+  
+        render() {
+          return (
+            <div>
+              {this.s.state1},{this.s.state2}
+            </div>
+          );
+        }
+      }
+      const wrapper = mount(<Test />);
+      await sleep(100);
+      expect(wrapper.find('div').text()).to.equal('state1,state2');
+    });
   });
 });
