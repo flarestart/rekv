@@ -316,4 +316,20 @@ describe('rekv', () => {
     }
     expect(count).to.equal(2);
   });
+  it('Changing state directly should receive an error', async () => {
+    await act(async () => {
+      const rekv = new Rekv({
+        demo: 'demo',
+      });
+      function Test() {
+        const s: any = rekv.useState('demo');
+        expect(() => {
+          s.demo = 'change';
+        }).to.throw();
+        return <div>{s.demo}</div>;
+      }
+      mount(<Test />);
+      await sleep(100);
+    });
+  });
 });

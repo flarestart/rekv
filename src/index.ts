@@ -63,6 +63,7 @@ export class Rekv<
   private _updateId = 0;
   private _state: any = {};
   private _inDelegate = false;
+  private _stateGetter: any = {};
 
   constructor(initState: T, options?: { effects: E }) {
     if (!isPlainObject(initState)) {
@@ -77,6 +78,19 @@ export class Rekv<
       });
     }
     this.effects = effects;
+  }
+
+  private _getStateGetter(keys: any[]) {
+    keys.forEach((key) => {
+      if (!this._stateGetter.hasOwnProperty(key)) {
+        Object.defineProperty(this._stateGetter, key, {
+          get: () => this._state[key],
+          enumerable: true,
+          configurable: false,
+        });
+      }
+    });
+    return this._stateGetter;
   }
 
   /**
@@ -170,21 +184,13 @@ export class Rekv<
    * @returns changed keys and values
    */
   useState = <K extends keyof T>(...keys: K[]): Readonly<Pick<T, K>> => {
-    const [value, setValue] = useState(() => {
-      const v: any = {};
-      keys.forEach((key) => {
-        v[key] = this._state[key];
-      });
-      return v;
-    });
+    const [value, setValue] = useState(() => this._getStateGetter(keys));
 
     useEffect(() => {
+      const stateGatter = this._getStateGetter(keys);
       const updater = () => {
-        const v: any = {};
-        keys.forEach((key) => {
-          v[key] = this._state[key];
-        });
-        setValue(v);
+        // trigger react rerender
+        setValue(Object.create(stateGatter));
       };
       keys.forEach((key) => {
         this.on(key, updater);
@@ -204,16 +210,13 @@ export class Rekv<
    * @returns changed keys and values
    */
   classUseState<K extends keyof T>(component: Component, ...keys: K[]): Readonly<Pick<T, K>> {
-    const ret: any = {};
+    const stateGatter = this._getStateGetter(keys);
     const unmount = component.componentWillUnmount;
     const updater = () => {
       component.forceUpdate();
     };
     keys.forEach((key) => {
       this.on(key, updater);
-      Object.defineProperty(ret, key, {
-        get: () => this._state[key],
-      });
     });
     component.componentWillUnmount = () => {
       keys.forEach((key) => {
@@ -223,7 +226,7 @@ export class Rekv<
         unmount.call(component);
       }
     };
-    return ret;
+    return stateGatter;
   }
 
   get currentState(): DeepReadonly<T> {
