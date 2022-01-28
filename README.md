@@ -4,7 +4,7 @@ Rekv 是一个为 React 函数式组件设计的全局状态管理器，且对�
 
 [English Document](./README_EN.md)
 
-[![Coveralls][coverage-image]][coverage-url]
+[![Test coverage][codecov-image]][codecov-url]
 [![NPM version][npm-image]][npm-url]
 [![Downloads][downloads-image]][downloads-url]
 
