@@ -4,19 +4,26 @@ Rekv 是一个为 React 函数式组件设计的全局状态管理器，且对�
 
 [English Document](./README_EN.md)
 
-[![Travis CI][ci-image]][ci-url]
 [![Coveralls][coverage-image]][coverage-url]
 [![NPM version][npm-image]][npm-url]
 [![Downloads][downloads-image]][downloads-url]
 
+[codecov-image]: https://img.shields.io/codecov/c/github/flarestart/rekv.svg?style=flat-square
+[codecov-url]: https://codecov.io/github/flarestart/rekv?branch=master
+[npm-image]: https://img.shields.io/npm/v/rekv.svg
+[npm-url]: https://npmjs.org/package/rekv
+[downloads-image]: http://img.shields.io/npm/dm/rekv.svg
+[downloads-url]: https://npmjs.org/package/rekv
+
 ### 特色<a id="feature"></a>
 
 - 一个简单但易用的状态管理器
-- 高性能，使用 Key-Value 而不是树型结构来处理状态
-- 支持 TypeScript 静态检查
-- 支持状态变更事件委托（拦截器）
-- 无 Redux，无依赖，仅 state
+- 无 Redux，无依赖，gzip 后仅有 1.5 KB
 - 不使用高阶组件（HOC）
+- 支持 Hooks 与类组件
+- 高性能，使用 Key-Value 而不是树型结构来处理状态
+- 方法与状态都支持 TypeScript 静态检查
+- 支持状态变更事件委托（拦截器）
 
 ### 目录
 
@@ -48,24 +55,186 @@ yarn add rekv
 
 版本要求：React 版本 >= 16.8.0
 
-### 快速使用<a id="quick-use"></a>
 
-> 适用于小型项目，只需要一个全局状态
+### 使用方法<a id="advanced-use"></a>
+
+> 可创建多个 store，并对每个状态进行 TypeScript 静态检查
+
+#### 函数式组件使用方式<a id="use-in-function-component"></a>
+
+**使用 Rekv 创建一个 store**
+
+```ts
+// store.ts
+import Rekv from 'rekv';
+
+export default new Rekv({
+  name: 'test',
+  count: 0,
+});
+```
+
+**使用状态**
 
 ```tsx
-// Demo.tsx
 import React from 'react';
-import { globalStore } from 'rekv';
+import store from './store';
 
 export default function Demo() {
-  // 使用状态
-  const { name } = globalStore.useState('name');
-  return <div>Hello, {name}</div>;
+  const s = store.useState('name', 'count');
+
+  return (
+    <div>
+      {s.name}, {s.count}
+    </div>
+  );
+}
+```
+
+**在另一个组件内更新状态**
+
+```tsx
+import React from 'react';
+import store from './store';
+
+// 重置计数器
+function reset() {
+  store.setState({ count: 0 });
 }
 
-// 在另一个文件，或其他地方调用
-globalStore.setState({ name: 'Jack' });
+function increment() {
+  store.setState((state) => ({ count: state.count + 1 }));
+}
+
+function decrement() {
+  store.setState((state) => ({ count: state.count - 1 }));
+}
+
+export default function Buttons() {
+  return (
+    <div>
+      <button onClick={reset}>reset</button>
+      <button onClick={increment}>+1</button>
+      <button onClick={decrement}>-1</button>
+    </div>
+  );
+}
 ```
+
+#### 在类组件中使用<a id="use-in-class-component"></a>
+
+```tsx
+import React, { Component } from 'react';
+import store from './store';
+
+export default class MyComponent extends Component {
+  s = store.classUseState(this, 'count');
+
+  render() {
+    return <div>{this.s.count}</div>;
+  }
+}
+```
+
+#### 使用 TypeScript 类型检查<a id="ts-check"></a>
+
+```tsx
+// store.ts
+import Rekv from 'rekv';
+
+interface InitState {
+  name: string;
+  age?: number;
+}
+
+const initState: InitState = {
+  name: 'Jack',
+  age: 25,
+};
+
+const store = new Rekv(initState);
+
+export default store;
+```
+
+```tsx
+// User.ts
+import React from 'react';
+import store from './store';
+
+export default function User() {
+  // name 将被推断为 string 类型
+  // age 将被推断为 number | undefined 类型
+  const s = store.useState('name', 'age');
+
+  return (
+    <div>
+      {s.name}, {s.age}
+    </div>
+  );
+}
+```
+
+#### 获取当前时刻的状态<a id="get-current-state"></a>
+
+```tsx
+import store from './store';
+
+// 获取当前时刻的状态
+store.currentState;
+// 或
+store.getCurrentState(); // 兼容旧版本的 API
+```
+
+#### 事件委托、拦截器<a id="delegate"></a>
+
+```tsx
+import store from './store';
+
+store.delegate = {
+  beforeUpdate: ({ state }) => {
+    console.log('beforeUpdate', state);
+    // 可在这里拦截 setState 的值，并进行修改
+    return state;
+  },
+  afterUpdate: ({ state }) => {
+    // afterUpdate 的 state 只包含了需要更新的状态
+    console.log('afterUpdate', state);
+  },
+};
+```
+
+#### 使用副作用<a id="effects"></a>
+
+```tsx
+import Rekv from 'rekv';
+
+// 定义副使用
+const store = new Rekv(
+  { foo: 'bar', ret: null },
+  {
+    effects: {
+      changeFoo(name: string) {
+        this.setState({ foo: name });
+      },
+      // 定义异步副作用
+      async loadResource() {
+        const ret = await fetchUrl('...');
+        this.setState({
+          ret,
+        });
+      },
+    },
+  }
+);
+
+// 使用副作用
+store.effects.changeFoo('hello');
+
+// 使用异步副作用
+await store.effects.loadResource();
+```
+
 
 ### API
 
@@ -157,184 +326,6 @@ globalStore.setState({ name: 'Jack' });
 
   - `.classUseState()` [在类组件中使用状态](#use-in-class-component)
 
-### 高级用法<a id="advanced-use"></a>
-
-> 适用于多个 Store 的情况，可对每个状态进行 TypeScript 静态检查
-
-#### 函数式组件使用方式<a id="use-in-function-component"></a>
-
-**使用 Rekv 创建一个 store**
-
-```ts
-// store.ts
-import Rekv from 'rekv';
-
-export default new Rekv({
-  name: 'test',
-  count: 0,
-});
-```
-
-**使用状态**
-
-```tsx
-import React from 'react';
-import store from './store';
-
-export default function Demo() {
-  const { name, count } = store.useState('name', 'count');
-
-  return (
-    <div>
-      {name}, {count}
-    </div>
-  );
-}
-```
-
-**在另一个组件内更新状态**
-
-```tsx
-import React from 'react';
-import store from './store';
-
-// 重置计数器
-function reset() {
-  store.setState({ count: 0 });
-}
-
-function increment() {
-  store.setState((state) => ({ count: state.count + 1 }));
-}
-
-function decrement() {
-  store.setState((state) => ({ count: state.count - 1 }));
-}
-
-export default function Buttons() {
-  return (
-    <div>
-      <button onClick={reset}>reset</button>
-      <button onClick={increment}>+1</button>
-      <button onClick={decrement}>-1</button>
-    </div>
-  );
-}
-```
-
-#### 在类组件中使用<a id="use-in-class-component"></a>
-
-```tsx
-import React, { Component } from 'react';
-import store from './store';
-
-export default class MyComponent extends Component {
-  s = store.classUseState(this, 'count');
-
-  render() {
-    return <div>{this.s.count}</div>;
-  }
-}
-```
-
-#### 使用 TypeScript 类型检查<a id="ts-check"></a>
-
-```tsx
-// store.ts
-import Rekv from 'rekv';
-
-interface InitState {
-  name: string;
-  age?: number;
-}
-
-const initState: InitState = {
-  name: 'Jack',
-  age: 25,
-};
-
-const store = new Rekv(initState);
-
-export default store;
-```
-
-```tsx
-// User.ts
-import React from 'react';
-import store from './store';
-
-export default function User() {
-  // name 将被推断为 string 类型
-  // age 将被推断为 number | undefined 类型
-  const { name, age } = store.useState('name', 'age');
-
-  return (
-    <div>
-      {name}, {age}
-    </div>
-  );
-}
-```
-
-#### 获取当前时刻的状态<a id="get-current-state"></a>
-
-```tsx
-import store from './store';
-
-// 获取当前时刻的状态
-store.currentState;
-// 或
-store.getCurrentState(); // 兼容旧版本的 API
-```
-
-#### 事件委托、拦截器<a id="delegate"></a>
-
-```tsx
-import store from './store';
-
-store.delegate = {
-  beforeUpdate: ({ state }) => {
-    console.log('beforeUpdate', state);
-    // 可在这里拦截 setState 的值，并进行修改
-    return state;
-  },
-  afterUpdate: ({ state }) => {
-    // afterUpdate 的 state 只包含了需要更新的状态
-    console.log('afterUpdate', state);
-  },
-};
-```
-
-#### 使用副作用<a id="effects"></a>
-
-```tsx
-import Rekv froom 'rekv';
-
-// 定义副使用
-const store = new Rekv(
-  { foo: 'bar' },
-  {
-    effects: {
-      changeFoo(name: string) {
-        this.setState({ foo: name });
-      },
-    },
-  }
-);
-
-// 使用副作用
-store.effects.changeFoo('hello')
-```
-
 ### License
 
 [MIT licensed](./LICENSE)
-
-[coverage-image]: https://img.shields.io/coveralls/flarestart/rekv.svg
-[coverage-url]: https://coveralls.io/github/flarestart/rekv
-[ci-image]: https://img.shields.io/travis/flarestart/rekv.svg?branch=master
-[ci-url]: https://travis-ci.org/flarestart/rekv
-[npm-image]: https://img.shields.io/npm/v/rekv.svg
-[npm-url]: https://npmjs.org/package/rekv
-[downloads-image]: http://img.shields.io/npm/dm/rekv.svg
-[downloads-url]: https://npmjs.org/package/rekv
